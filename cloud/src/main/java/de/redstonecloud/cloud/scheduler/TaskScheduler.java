@@ -24,6 +24,14 @@ public class TaskScheduler {
         this.executorService = executorService;
     }
 
+    public void cancelAll() {
+        for(TaskHandler t : taskHandlers.values()) {
+            t.cancel();
+        }
+
+        taskHandlers.clear();
+    }
+
     public <T extends Runnable> TaskHandler<T> scheduleTask(T task) {
         return this.scheduleTask(task, TimeUnit.MILLISECONDS, 0L, 0L);
     }

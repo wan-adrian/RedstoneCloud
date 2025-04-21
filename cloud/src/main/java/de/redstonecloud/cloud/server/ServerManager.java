@@ -155,23 +155,29 @@ public class ServerManager {
     }
 
     public boolean stopAll() {
-        boolean allStopped = false;
-        int stopped = 0;
-
         if (servers.isEmpty()) return true;
 
-        for (Server server : servers.values().toArray(Server[]::new).clone()) {
-            synchronized (this) {
-                server.stop();
-                stopped++;
-            }
+        List<CompletableFuture<Void>> stopFutures = new ArrayList<>();
 
-            if (stopped == servers.size()) {
-                allStopped = true;
+        for (Server server : servers.values().toArray(Server[]::new).clone()) {
+            CompletableFuture<Void> stopFuture = CompletableFuture.runAsync(() -> {
+                synchronized (this) {
+                    server.kill();
+                }
+            });
+            stopFutures.add(stopFuture);
+        }
+
+        while(!servers.isEmpty()) {
+            try {
+                CompletableFuture.allOf(stopFutures.toArray(new CompletableFuture[0])).get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+                return false;
             }
         }
 
-        return allStopped;
+        return true;
     }
 
     public Server[] getServersByTemplate(Template template) {
