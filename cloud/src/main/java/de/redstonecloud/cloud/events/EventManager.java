@@ -37,7 +37,7 @@ public class EventManager {
         eventHandler.subscribe((Consumer<Event>) handler, priority);
     }
 
-    public <T extends Event> CompletableFuture<T> callEvent(T event) {
+    public <T extends Event> T callEvent(T event) {
         EventHandler eventHandler = this.handlerMap.computeIfAbsent(event.getClass(), e -> new EventHandler(event.getClass(), this));
         return eventHandler.handle(event);
     }

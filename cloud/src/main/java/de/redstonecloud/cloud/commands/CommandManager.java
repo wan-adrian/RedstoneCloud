@@ -17,7 +17,7 @@ public class CommandManager {
     }
     private final Logger logger = Logger.getInstance();
 
-    private void addCommand(Command cmd) {
+    public void addCommand(Command cmd) {
         commands.add(cmd);
         commandMap.put(cmd.getCommand(), cmd);
     }

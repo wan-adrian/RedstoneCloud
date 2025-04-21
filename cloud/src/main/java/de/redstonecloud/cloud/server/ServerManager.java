@@ -133,34 +133,25 @@ public class ServerManager {
                 .port(ThreadLocalRandom.current().nextInt(10000, 50000))
                 .build();
 
-        CompletableFuture<Server> result = new CompletableFuture<>();
-
         srv.initName(id != null && id != -1 ? id : null);
 
-        RedstoneCloud.getInstance().getEventManager().callEvent(new ServerCreateEvent(srv)).whenComplete((res, a) -> {
-            if(res.isCancelled()) {
-                result.complete(null);
-                return;
-            }
-
-            result.complete(srv);
-            srv.prepare();
-            add(srv);
-            template.setRunningServers(template.getRunningServers() + 1);
-
-            RedstoneCloud cloud = RedstoneCloud.getInstance();
-            cloud.getScheduler().scheduleDelayedTask(() -> {
-                srv.start();
-                RedstoneCloud.getInstance().getEventManager().callEvent(new ServerStartEvent(srv));
-            }, TimeUnit.SECONDS, 1);
-        });
-
-        try {
-            return result.completeOnTimeout(null, 1000L, TimeUnit.MILLISECONDS).get();
-        } catch(Exception e) {
-            e.printStackTrace();
+        ServerCreateEvent res = RedstoneCloud.getInstance().getEventManager().callEvent(new ServerCreateEvent(srv));
+        if (res.isCancelled()) {
             return null;
         }
+
+        srv.prepare();
+        add(srv);
+        template.setRunningServers(template.getRunningServers() + 1);
+
+        RedstoneCloud cloud = RedstoneCloud.getInstance();
+        cloud.getScheduler().scheduleDelayedTask(() -> {
+            srv.start();
+            RedstoneCloud.getInstance().getEventManager().callEvent(new ServerStartEvent(srv));
+        }, TimeUnit.SECONDS, 1);
+
+        return srv;
+
     }
 
     public boolean stopAll() {

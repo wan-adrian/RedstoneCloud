@@ -44,6 +44,14 @@ public class Cache {
         }
     }
 
+    public String set(String key, String value, long seconds) {
+        try (Jedis jedis = this.pool.getResource()) {
+            String ret = jedis.set(key, value);
+            if(seconds != -1L) jedis.expire(key, seconds);
+            return ret;
+        }
+    }
+
     public void setList(String key, Collection<String> collection) {
         Preconditions.checkArgument(!collection.isEmpty(), "List cannot be empty");
         try (Jedis jedis = this.pool.getResource()) {

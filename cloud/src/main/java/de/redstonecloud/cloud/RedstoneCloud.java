@@ -190,7 +190,6 @@ public class RedstoneCloud {
 
         this.stopped = true;
         running = false;
-        broker.shutdown();
         this.scheduler.stopScheduler();
 
         try {
@@ -202,8 +201,8 @@ public class RedstoneCloud {
             logger.info(Translator.translate("cloud.shutdown.plugins"));
             this.eventManager.getThreadedExecutor().shutdown();
             logger.info(Translator.translate("cloud.shutdown.complete"));
-            Broker.get().getPool().getResource().flushAll();
-            Broker.get().shutdown();
+            broker.getPool().getResource().flushAll();
+            broker.shutdown();
             if(usingIntRedis) redisServer.stop();
         } catch (InterruptedException e) {
             e.printStackTrace();

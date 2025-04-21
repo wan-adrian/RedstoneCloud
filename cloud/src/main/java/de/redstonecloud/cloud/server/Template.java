@@ -39,7 +39,7 @@ public class Template {
             }
 
             if(stopOnEmpty && server.players.isEmpty() && (System.currentTimeMillis() - server.lastPlayerUpdate > 1000*60*5)) {
-                server.stop();
+                server.kill();
             }
         }
 

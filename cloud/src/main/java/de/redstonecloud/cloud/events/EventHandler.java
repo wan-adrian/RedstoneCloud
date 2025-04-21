@@ -19,15 +19,11 @@ public class EventHandler {
         this.eventManager = eventManager;
     }
 
-    public <T extends Event> CompletableFuture<T> handle(T event) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        CompletableFuture.runAsync(() -> {
-            for (EventPriority priority : EventPriority.values()) {
+    public <T extends Event> T handle(T event) {
+        for (EventPriority priority : EventPriority.values()) {
                 this.handlePriority(priority, event);
-            }
-        });
-        future.complete(event);
-        return future;
+        }
+        return event;
     }
 
     private void handlePriority(EventPriority priority, Event event) {
