@@ -63,6 +63,7 @@ public class ServerManager {
                     .minServers(data.get("minServers").getAsInt())
                     .maxServers(data.get("maxServers").getAsInt())
                     .staticServer(data.get("staticServer").getAsBoolean())
+                    .shutdownTimeMs(data.has("shutdownTimeMs") ? data.get("shutdownTimeMs").getAsInt() : 5000)
                     .stopOnEmpty(data.has("stopOnEmpty") && data.get("stopOnEmpty").getAsBoolean())
                     .build();
             templates.put(data.get("name").getAsString(), t);
@@ -128,6 +129,7 @@ public class ServerManager {
     public Server startServer(Template template, Integer id) {
         Server srv = Server.builder()
                 .template(template)
+                .uuid(UUID.randomUUID())
                 .createdAt(System.currentTimeMillis())
                 .type(template.getType())
                 .port(ThreadLocalRandom.current().nextInt(10000, 50000))

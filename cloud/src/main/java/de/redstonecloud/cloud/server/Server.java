@@ -32,6 +32,7 @@ public class Server implements ICloudServer, Cacheable {
     public Template template;
     public String name;
     public int port;
+    public UUID uuid;
     @Builder.Default
     public List<String> players = new ArrayList<>();
     @Builder.Default
@@ -51,6 +52,7 @@ public class Server implements ICloudServer, Cacheable {
     public String toString() {
         JsonObject obj = new JsonObject();
         obj.addProperty("name", name);
+        obj.addProperty("uuid", uuid.toString());
         obj.addProperty("template", template.getName());
         obj.addProperty("status", status.name());
         obj.addProperty("type", type.name());
@@ -157,9 +159,6 @@ public class Server implements ICloudServer, Cacheable {
 
         process.destroy();
         status = ServerStatus.STOPPED;
-        resetCache();
-        ServerManager.getInstance().remove(this);
-        RedstoneCloud.getInstance().getEventManager().callEvent(new ServerExitEvent(this));
 
         ServerType[] proxyTypes = Arrays.stream(ServerManager.getInstance().getTypes().values().toArray(new ServerType[0])).filter(t -> t.isProxy()).toArray(ServerType[]::new);
 
@@ -188,6 +187,9 @@ public class Server implements ICloudServer, Cacheable {
                 e.printStackTrace();
             }
 
+            resetCache();
+            ServerManager.getInstance().remove(this);
+            RedstoneCloud.getInstance().getEventManager().callEvent(new ServerExitEvent(this));
         }
     }
 
@@ -205,7 +207,6 @@ public class Server implements ICloudServer, Cacheable {
         ).directory(new File(directory));
 
         //TODO: CHANGE IP IN CLUSTER MODE
-        processBuilder.environment().put("NETTY_PORT", CloudConfig.getCfg().get("netty_port").getAsString());
         processBuilder.environment().put("REDIS_IP", CloudConfig.getCfg().get("redis_bind").getAsString());
         processBuilder.environment().put("REDIS_PORT", String.valueOf(CloudConfig.getCfg().get("redis_port").getAsInt()));
         processBuilder.environment().put("BRIDGE_CFG", CloudConfig.getCfg().get("bridge").getAsJsonObject().toString());
@@ -221,8 +222,6 @@ public class Server implements ICloudServer, Cacheable {
         this.logger.start();
 
         process.onExit().thenRun(this::onExit);
-
-        //TODO: server manager stuff
     }
 
     public void kill() {
@@ -236,7 +235,7 @@ public class Server implements ICloudServer, Cacheable {
                     RedstoneCloud.getLogger().debug(name + " didn't stop in time. killing process...");
                 }
             }
-        }, 5000);
+        }, template.getShutdownTimeMs());
     }
 
     @Override
@@ -252,6 +251,11 @@ public class Server implements ICloudServer, Cacheable {
 
         status = ServerStatus.STOPPING;
         resetCache();
+    }
+
+    @Override
+    public UUID getUUID() {
+        return uuid;
     }
 
     @Override

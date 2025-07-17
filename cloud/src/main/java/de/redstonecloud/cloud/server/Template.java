@@ -19,6 +19,9 @@ public class Template {
     @Setter
     @Builder.Default
     public boolean stopOnEmpty = false;
+    @Setter
+    @Builder.Default
+    public int shutdownTimeMs = 5000;
 
     public void checkServers() {
         Server[] servers = ServerManager.getInstance().getServersByTemplate(this);

@@ -38,7 +38,7 @@ public class ServerLogger extends Thread {
         }
 
         errorReader = DummyErrorReader.builder()
-                .server(this.server)
+                .logger(this)
                 .build();
 
         errorReader.start();
@@ -127,5 +127,17 @@ public class ServerLogger extends Thread {
 
     public void disableConsoleLogging() {
         logToConsole = false;
+    }
+
+    public boolean isConsoleLogging() {
+        return logToConsole;
+    }
+
+    public BufferedWriter getWriter() {
+        return writer;
+    }
+
+    public void addMessage(String msg) {
+        lastMessages.add(msg);
     }
 }

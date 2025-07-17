@@ -25,11 +25,13 @@ public class TaskScheduler {
     }
 
     public void cancelAll() {
-        for(TaskHandler t : taskHandlers.values()) {
-            t.cancel();
-        }
+        synchronized (taskHandlers) {
+            for(TaskHandler t : taskHandlers.values()) {
+                t.cancel();
+            }
 
-        taskHandlers.clear();
+            taskHandlers.clear();
+        }
     }
 
     public <T extends Runnable> TaskHandler<T> scheduleTask(T task) {

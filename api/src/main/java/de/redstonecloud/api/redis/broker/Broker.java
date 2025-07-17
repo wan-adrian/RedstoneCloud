@@ -18,6 +18,8 @@ import redis.clients.jedis.JedisPubSub;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -42,6 +44,8 @@ public class Broker {
 
     protected Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<Message>>> messageConsumers;
     protected Int2ObjectOpenHashMap<Consumer<Message>> pendingMessageResponses;
+
+    private final ExecutorService publishExecutor = Executors.newFixedThreadPool(8);
 
     private boolean running = false;
 
@@ -99,15 +103,23 @@ public class Broker {
     }
 
     public void publish(Packet packet) {
-        try (Jedis publisher = this.pool.getResource()) {
-            publisher.publish(packet.getTo().toLowerCase(), packet.finalDocument().toString());
-        } catch (Exception ignored) {}
+        publishExecutor.submit(() -> {
+            try (Jedis publisher = this.pool.getResource()) {
+                publisher.publish(packet.getTo().toLowerCase(), packet.finalDocument().toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void publish(Message message) {
-        try (Jedis publisher = this.pool.getResource()) {
-            publisher.publish(message.getTo().toLowerCase(), message.toJson());
-        } catch (Exception ignored) {}
+        publishExecutor.submit(() -> {
+            try (Jedis publisher = this.pool.getResource()) {
+                publisher.publish(message.getTo().toLowerCase(), message.toJson());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void listen(String channel, Consumer<Packet> callback) {
