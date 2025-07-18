@@ -186,11 +186,11 @@ public class Server implements ICloudServer, Cacheable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            resetCache();
-            ServerManager.getInstance().remove(this);
-            RedstoneCloud.getInstance().getEventManager().callEvent(new ServerExitEvent(this));
         }
+
+        resetCache();
+        ServerManager.getInstance().remove(this);
+        RedstoneCloud.getInstance().getEventManager().callEvent(new ServerExitEvent(this));
     }
 
     @Override
