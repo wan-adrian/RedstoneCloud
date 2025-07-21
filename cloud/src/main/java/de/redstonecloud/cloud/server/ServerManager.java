@@ -195,12 +195,12 @@ public class ServerManager {
         int min = Integer.MAX_VALUE;
 
         for (Server server : servers.values()) {
-            if (server.getTemplate().equals(template) && server.getStatus() == ServerStatus.RUNNING) {
+            if (server.getTemplate().equals(template) &&
+                    server.getStatus() == ServerStatus.RUNNING &&
+                    server.getPlayers().size() < min) {
                 //get server with most players
-                if (server.getPlayers().size() < min) {
-                    min = server.getPlayers().size();
-                    best.add(new BestServerResult(server, server.getTemplate().getMaxPlayers() - server.getPlayers().size()));
-                }
+                min = server.getPlayers().size();
+                best.add(new BestServerResult(server, server.getTemplate().getMaxPlayers() - server.getPlayers().size()));
             }
         }
 
