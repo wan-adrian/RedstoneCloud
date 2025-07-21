@@ -52,7 +52,6 @@ public class RedstoneCloud {
 
     @SneakyThrows
     public static void main(String[] args) {
-        log.info("RC BOOT TEST STARTED");
         workingDir = System.getProperty("user.dir");
 
         if (!new File("./.cloud.setup").exists()) Utils.setup();
