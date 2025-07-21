@@ -105,7 +105,6 @@ public class RedstoneCloud {
     protected ServerManager serverManager;
     protected CommandManager commandManager;
     protected Console console;
-    protected BufferedWriter logFile;
     protected PluginManager pluginManager;
     protected EventManager eventManager;
 
@@ -140,12 +139,6 @@ public class RedstoneCloud {
         this.keyCache = new KeyCache();
         this.keyCache.addKey("cloud", publicKey);
 
-        try {
-            logFile = new BufferedWriter(new FileWriter("./logs/cloud.log", true));
-        } catch (IOException e) {
-            log.error("Could not create log file: ", e);
-        }
-
         log.info(Translator.translate("cloud.startup"));
 
         createBaseFolders();
@@ -159,17 +152,6 @@ public class RedstoneCloud {
 
         this.pluginManager = new PluginManager(this);
         pluginManager.loadAllPlugins();
-
-        this.scheduler.scheduleRepeatingTask(new Task() {
-            @Override
-            protected void onRun(long currentMillis) {
-                try {
-                    logFile.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, TimeUnit.MILLISECONDS, 1000);
 
         this.console = new Console(this);
         this.consoleThread = new ConsoleThread();
@@ -206,14 +188,6 @@ public class RedstoneCloud {
             log.error("Error during shutdown: ", e);
         } catch (Exception e) {
             log.error("Unexpected error during shutdown: ", e);
-        } finally {
-            try {
-                if (logFile != null) {
-                    logFile.close();
-                }
-            } catch (IOException e) {
-                log.error("Could not close log file: ", e);
-            }
         }
 
         System.exit(0);
