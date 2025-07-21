@@ -96,7 +96,6 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
 
     @Override
     public void connect(String server) {
-
     }
 
     @Override

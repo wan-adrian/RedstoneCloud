@@ -30,6 +30,8 @@ public class CommandManager {
         addCommand(new StopCommand("stop"));
         addCommand(new ListCommand("list"));
         addCommand(new KillCommand("kill"));
+        addCommand(new ExecuteCommand("execute"));
+        addCommand(new PlayerCommand("player"));
     }
 
     public void executeCommand(String command, String[] args) {
