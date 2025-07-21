@@ -1,16 +1,17 @@
 package de.redstonecloud.cloud.server;
 
 import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.logger.Logger;
 import de.redstonecloud.cloud.scheduler.task.TaskHandler;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.*;
 import java.util.HashSet;
 import java.util.Set;
 
 @Builder
+@Log4j2
 public class ServerLogger extends Thread {
     @Getter
     private Server server;
@@ -68,7 +69,7 @@ public class ServerLogger extends Thread {
 
             try {
                 while (running && (line = out.readLine()) != null) {
-                    if (logToConsole) Logger.getInstance().server(server.getName(), line);
+                    if (logToConsole) log.info("[" + server.getName() + "]", line);
                     if (writer != null) {
                         try {
                             writer.write(line);
@@ -108,13 +109,15 @@ public class ServerLogger extends Thread {
             BufferedReader reader = new BufferedReader(new FileReader(logFile.getPath()));
             String line;
             while ((line = reader.readLine()) != null) {
-                Logger.getInstance().server(server.getName(), line);
+                log.info("[" + server.getName() + "]", line);
                 sent.add(line);
             }
 
             //output all lastMessages
             for (String msg : lastMessages) {
-                Logger.getInstance().server(server.getName(), msg);
+                if (!sent.contains(msg)) {
+                    log.info("[" + server.getName() + "]", msg);
+                }
             }
 
             reader.close();

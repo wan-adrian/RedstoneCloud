@@ -3,11 +3,12 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.logger.Logger;
 import de.redstonecloud.cloud.server.Server;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.Arrays;
 
+@Log4j2
 public class KillCommand extends Command {
     public int argCount = 1;
 
@@ -18,7 +19,7 @@ public class KillCommand extends Command {
     @Override
     protected void onCommand(String[] args) {
         if (args.length == 0) {
-            Logger.getInstance().error("Usage: kill <server>");
+            log.error("Usage: kill <server>");
             return;
         }
 
@@ -32,12 +33,12 @@ public class KillCommand extends Command {
                     s.kill();
                 }
 
-                Logger.getInstance().info("Stopped " + affectedServers.length + " servers");
+                log.info("Stopped " + affectedServers.length + " servers");
                 return;
             }
 
 
-            Logger.getInstance().error("Server not found.");
+            log.error("Server not found.");
             return;
         }
 

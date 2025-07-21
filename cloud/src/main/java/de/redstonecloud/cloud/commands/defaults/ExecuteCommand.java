@@ -3,10 +3,10 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.logger.Logger;
 import de.redstonecloud.cloud.server.Server;
-import de.redstonecloud.cloud.server.ServerLogger;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class ExecuteCommand extends Command {
     public int argCount = 1;
 
@@ -17,13 +17,13 @@ public class ExecuteCommand extends Command {
     @Override
     protected void onCommand(String[] args) {
         if (args.length < 2) {
-            Logger.getInstance().error("Usage: execute <server> <command>");
+            log.error("Usage: execute <server> <command>");
             return;
         }
 
         Server server = RedstoneCloud.getInstance().getServerManager().getServer(args[0]);
         if (server == null) {
-            Logger.getInstance().error("Server not found.");
+            log.error("Server not found.");
             return;
         }
 
@@ -32,12 +32,12 @@ public class ExecuteCommand extends Command {
                 .trim();
 
         if (command.isEmpty()) {
-            Logger.getInstance().error("No command provided to execute.");
+            log.error("No command provided to execute.");
             return;
         }
 
         server.writeConsole(command);
-        Logger.getInstance().info("Command executed on server " + server.getName() + ": " + command);
+        log.info("Command executed on server " + server.getName() + ": " + command);
     }
 
     @Override

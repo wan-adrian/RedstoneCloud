@@ -1,15 +1,13 @@
 package de.redstonecloud.cloud.commands.defaults;
 
-import de.redstonecloud.api.util.EmptyArrays;
-import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.logger.Logger;
 import de.redstonecloud.cloud.player.CloudPlayer;
-import de.redstonecloud.cloud.server.Server;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Log4j2
 public class PlayerCommand extends Command {
     public int argCount = 1;
 
@@ -34,25 +32,25 @@ public class PlayerCommand extends Command {
     }
 
     private void showUsage() {
-        Logger.getInstance().error("Usage: player <help|list|playername>");
+        log.error("Usage: player <help|list|playername>");
     }
 
     private void showHelp() {
-        Logger.getInstance().info("Usage: player <help|list|playername> <action>");
-        Logger.getInstance().info("Actions:");
-        Logger.getInstance().info("  info - Show player information");
-        Logger.getInstance().info("  connect <server> - Connect player to a server");
-        Logger.getInstance().info("  kick <reason> - Kick player with a reason");
+        log.info("Usage: player <help|list|playername> <action>");
+        log.info("Actions:");
+        log.info("  info - Show player information");
+        log.info("  connect <server> - Connect player to a server");
+        log.info("  kick <reason> - Kick player with a reason");
     }
 
     private void listPlayers() {
-        Logger.getInstance().info("Connected Players:");
+        log.info("Connected Players:");
         getServer().getPlayerManager().getPlayersByName().entrySet().forEach(data -> {
             String playerInfo = String.format(" - %s (%s | %s)",
                     data.getKey(),
                     data.getValue().getConnectedNetwork().getName(),
                     data.getValue().getConnectedServer().getName());
-            Logger.getInstance().info(playerInfo);
+            log.info(playerInfo);
         });
     }
 
@@ -73,14 +71,14 @@ public class PlayerCommand extends Command {
     private CloudPlayer findPlayer(String playerName) {
         CloudPlayer player = getServer().getPlayerManager().getPlayersByName().get(playerName);
         if (player == null) {
-            Logger.getInstance().error("Player not found: " + playerName);
+            log.error("Player not found: " + playerName);
         }
         return player;
     }
 
     private void showPlayerActionUsage() {
-        Logger.getInstance().error("Usage: player <name> <action>");
-        Logger.getInstance().info("Available actions: info, connect, kick");
+        log.error("Usage: player <name> <action>");
+        log.info("Available actions: info, connect, kick");
     }
 
     private void executePlayerAction(CloudPlayer player, String[] args) {
@@ -94,12 +92,12 @@ public class PlayerCommand extends Command {
     }
 
     private void showPlayerInfo(CloudPlayer player) {
-        Logger.getInstance().info("Player Information:");
-        Logger.getInstance().info("Name: " + player.getName());
-        Logger.getInstance().info("UUID: " + player.getUUID());
-        Logger.getInstance().info("Address: " + player.getAddress());
-        Logger.getInstance().info("Server: " + getServerName(player));
-        Logger.getInstance().info("Proxy: " + getProxyName(player));
+        log.info("Player Information:");
+        log.info("Name: " + player.getName());
+        log.info("UUID: " + player.getUUID());
+        log.info("Address: " + player.getAddress());
+        log.info("Server: " + getServerName(player));
+        log.info("Proxy: " + getProxyName(player));
     }
 
     private String getServerName(CloudPlayer player) {
@@ -113,12 +111,12 @@ public class PlayerCommand extends Command {
     }
 
     private void showNotImplemented() {
-        Logger.getInstance().info("Not implemented yet.");
+        log.info("Not implemented yet.");
     }
 
     private void showUnknownAction(String action) {
-        Logger.getInstance().error("Unknown action: " + action);
-        Logger.getInstance().info("Available actions: info, connect, kick");
+        log.error("Unknown action: " + action);
+        log.info("Available actions: info, connect, kick");
     }
 
     @Override

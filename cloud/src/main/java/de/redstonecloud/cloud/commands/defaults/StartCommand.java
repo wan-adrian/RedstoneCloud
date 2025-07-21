@@ -3,9 +3,10 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.logger.Logger;
 import de.redstonecloud.cloud.server.Template;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class StartCommand extends Command {
     public int argCount = 1;
 
@@ -16,13 +17,13 @@ public class StartCommand extends Command {
     @Override
     protected void onCommand(String[] args) {
         if (args.length == 0) {
-            Logger.getInstance().error("Usage: start <template> [count]");
+            log.error("Usage: start <template> [count]");
             return;
         }
 
         Template template = RedstoneCloud.getInstance().getServerManager().getTemplate(args[0]);
         if (template == null) {
-            Logger.getInstance().error("Template not found.");
+            log.error("Template not found.");
             return;
         }
 
@@ -51,7 +52,7 @@ public class StartCommand extends Command {
                 RedstoneCloud.getInstance().getServerManager().startServer(template);
             }
         } else RedstoneCloud.getInstance().getServerManager().startServer(template, newId);
-        Logger.getInstance().info("Successfully started server using template " + template.getName());
+        log.info("Successfully started server using template " + template.getName());
     }
 
     @Override

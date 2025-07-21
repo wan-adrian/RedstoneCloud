@@ -1,11 +1,12 @@
 package de.redstonecloud.cloud.commands;
 
 import de.redstonecloud.cloud.commands.defaults.*;
-import de.redstonecloud.cloud.logger.Logger;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
+@Slf4j
 public class CommandManager {
 
     @Getter
@@ -15,7 +16,6 @@ public class CommandManager {
     public CommandManager() {
         this.commands = new HashSet<Command>();
     }
-    private final Logger logger = Logger.getInstance();
 
     public void addCommand(Command cmd) {
         commands.add(cmd);
@@ -45,7 +45,7 @@ public class CommandManager {
             }
         } else {
             if(!command.isEmpty()) {
-                logger.info("This command does not exist!");
+                log.info("This command does not exist!");
             }
         }
     }

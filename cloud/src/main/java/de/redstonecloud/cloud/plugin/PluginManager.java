@@ -1,12 +1,12 @@
 package de.redstonecloud.cloud.plugin;
 
 import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.logger.Logger;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectObjectImmutablePair;
+import lombok.extern.log4j.Log4j2;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -21,8 +21,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Stream;
 
+@Log4j2
 public class PluginManager {
-
     public static final Yaml yamlLoader;
     static {
         Representer representer = new Representer(new DumperOptions());
@@ -45,7 +45,7 @@ public class PluginManager {
         try {
             this.loadPluginsInside(Paths.get(RedstoneCloud.getWorkingDir() + "/plugins/"));
         } catch (IOException e) {
-            Logger.getInstance().error("Error while filtering plugin files: " + e);
+            log.error("Error while filtering plugin files: " + e);
         }
     }
 
@@ -74,7 +74,7 @@ public class PluginManager {
 
     private PluginData loadPluginConfig(Path path) {
         if (!Files.isRegularFile(path) || !PluginLoader.isJarFile(path)) {
-            Logger.getInstance().warning("Cannot load plugin: Provided file is no jar file: " + path.getFileName());
+            log.warn("Cannot load plugin: Provided file is no jar file: " + path.getFileName());
             return null;
         }
 
@@ -87,7 +87,7 @@ public class PluginManager {
 
     private PluginClassLoader registerClassLoader(PluginData config, Path path) {
         if (this.getPluginByName(config.getName()) != null) {
-            Logger.getInstance().warning("Plugin is already loaded: " + config.getName());
+            log.warn("Plugin is already loaded: " + config.getName());
             return null;
         }
 
@@ -95,7 +95,7 @@ public class PluginManager {
         if (classLoader != null) {
             this.pluginClassLoaders.put(config.getName(), classLoader);
             this.pluginsToLoad.add(ObjectObjectImmutablePair.of(config, path));
-            Logger.getInstance().debug("Loaded class loader from " + path.getFileName());
+            log.debug("Loaded class loader from " + path.getFileName());
         }
         return classLoader;
     }
@@ -110,7 +110,7 @@ public class PluginManager {
     public Plugin loadPlugin(PluginData config, Path path) {
         File pluginFile = path.toFile();
         if (this.getPluginByName(config.getName()) != null) {
-            Logger.getInstance().warning("Plugin is already loaded: " + config.getName());
+            log.warn("Plugin is already loaded: " + config.getName());
             return null;
         }
 
@@ -131,11 +131,11 @@ public class PluginManager {
         try {
             plugin.onLoad();
         } catch (Exception e) {
-            Logger.getInstance().error("Failed to load plugin " + config.getName() + ": " + e);
+            log.error("Failed to load plugin " + config.getName() + ": " + e);
             return null;
         }
 
-        Logger.getInstance().info("Loaded plugin " + config.getName() + " successfully!");
+        log.info("Loaded plugin " + config.getName() + " successfully!");
         this.pluginMap.put(config.getName(), plugin);
         return plugin;
     }
@@ -161,7 +161,7 @@ public class PluginManager {
                 builder.append(", ");
             }
         }
-        Logger.getInstance().warning(builder.toString());
+        log.warn(builder.toString());
     }
 
     public boolean enablePlugin(Plugin plugin, String parent) {
@@ -171,13 +171,13 @@ public class PluginManager {
         if (plugin.getDescription().getDepends() != null) {
             for (String depend : plugin.getDescription().getDepends()) {
                 if (depend.equals(parent)) {
-                    Logger.getInstance().warning("§cCan not enable plugin " + pluginName + " circular dependency " + parent + "!");
+                    log.warn("§cCan not enable plugin " + pluginName + " circular dependency " + parent + "!");
                     return false;
                 }
 
                 Plugin dependPlugin = this.getPluginByName(depend);
                 if (dependPlugin == null) {
-                    Logger.getInstance().warning("§cCan not enable plugin " + pluginName + " missing dependency " + depend + "!");
+                    log.warn("§cCan not enable plugin " + pluginName + " missing dependency " + depend + "!");
                     return false;
                 }
 
@@ -190,7 +190,7 @@ public class PluginManager {
         try {
             plugin.setEnabled(true);
         } catch (Exception e) {
-            Logger.getInstance().error(e.getMessage());
+            log.error(e.getMessage());
             return false;
         }
         return true;
@@ -198,11 +198,11 @@ public class PluginManager {
 
     public void disableAllPlugins() {
         for (Plugin plugin : this.pluginMap.values()) {
-            Logger.getInstance().info("Disabling plugin " + plugin.getName() + "!");
+            log.info("Disabling plugin " + plugin.getName() + "!");
             try {
                 plugin.setEnabled(false);
             } catch (Exception e) {
-                Logger.getInstance().error(e.getMessage());
+                log.error(e.getMessage());
             }
         }
     }

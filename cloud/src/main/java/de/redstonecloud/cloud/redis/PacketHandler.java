@@ -22,7 +22,9 @@ import de.redstonecloud.cloud.server.Server;
 import de.redstonecloud.cloud.server.ServerManager;
 import de.redstonecloud.cloud.server.Template;
 import de.redstonecloud.cloud.utils.Translator;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class PacketHandler {
 
     public static void handle(Packet packet) {
@@ -46,7 +48,7 @@ public class PacketHandler {
 
         if (server == null || server.getStatus() != ServerStatus.STARTING) return;
         server.setStatus(ServerStatus.RUNNING);
-        RedstoneCloud.getLogger().info(Translator.translate("cloud.server.ready", clientId));
+        log.info(Translator.translate("cloud.server.ready", clientId));
         RedstoneCloud.getInstance().getEventManager().callEvent(new ServerReadyEvent(server));
     }
 
@@ -72,7 +74,7 @@ public class PacketHandler {
                 p.setConnectedServer(server);
             }
 
-            RedstoneCloud.getLogger().info("Player " + p.getName() + " connected to " + server.getName());
+            log.info("Player " + p.getName() + " connected to " + server.getName());
         }
     }
 
@@ -80,7 +82,7 @@ public class PacketHandler {
         Server server = RedstoneCloud.getInstance().getServerManager().getServer(packet.getServer());
         CloudPlayer p = PlayerManager.getInstance().getPlayer(packet.getUuid());
         if (p != null && server != null)
-            RedstoneCloud.getLogger().info("Player " + p.getName() + " disconnected from " + server.getName());
+            log.info("Player " + p.getName() + " disconnected from " + server.getName());
         if (server != null && server.getType().isProxy()) {
             if (p != null) {
                 RedstoneCloud.getInstance().getEventManager().callEvent(new PlayerDisconnectEvent(p, (Server) p.getConnectedNetwork(), (Server) p.getConnectedServer()));

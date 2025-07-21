@@ -1,11 +1,13 @@
 package de.redstonecloud.cloud.server;
 
-import de.redstonecloud.cloud.logger.Logger;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 
+@Log4j2
 @Builder
 public class DummyErrorReader extends Thread {
     @Getter
@@ -19,7 +21,7 @@ public class DummyErrorReader extends Thread {
             String line = "";
             try {
                 while (running && (line = out.readLine()) != null) {
-                    if (logger.isConsoleLogging()) Logger.getInstance().server(logger.getServer().getName(), line);
+                    if (logger.isConsoleLogging()) log.info("[" + logger.getServer().getName() + "]", line);
                     if (logger.getWriter() != null) {
                         try {
                             logger.getWriter().write(line);

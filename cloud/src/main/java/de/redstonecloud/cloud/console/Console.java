@@ -1,13 +1,14 @@
 package de.redstonecloud.cloud.console;
 
 import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.logger.Logger;
 import de.redstonecloud.cloud.utils.Utils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import net.minecrell.terminalconsole.SimpleTerminalConsole;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 
+@Log4j2
 @RequiredArgsConstructor
 public class Console extends SimpleTerminalConsole {
     private final RedstoneCloud server;
@@ -28,7 +29,7 @@ public class Console extends SimpleTerminalConsole {
             if (command.equalsIgnoreCase("_exit")) {
                 server.getCurrentLogServer().disableConsoleLogging();
                 server.setCurrentLogServer(null);
-                Logger.getInstance().info("Exited console");
+                log.info("Exited console");
             } else {
                 server.getCurrentLogServer().getServer().writeConsole(command);
             }

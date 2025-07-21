@@ -9,6 +9,8 @@ import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
 import de.redstonecloud.cloud.events.defaults.ServerStartEvent;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
+import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Getter
+@Log4j2
 public class ServerManager {
     private static ServerManager INSTANCE;
 
@@ -49,7 +52,7 @@ public class ServerManager {
             try {
                 content = new String(Files.readAllBytes(file.toPath()));
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Error reading template file: " + file.getName(), e);
             }
 
             if (content.isEmpty()) continue;
@@ -81,7 +84,7 @@ public class ServerManager {
             try {
                 content = new String(Files.readAllBytes(file.toPath()));
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Error reading server type file: " + file.getName(), e);
             }
 
             if (content.isEmpty()) continue;
@@ -153,7 +156,6 @@ public class ServerManager {
         }, TimeUnit.SECONDS, 1);
 
         return srv;
-
     }
 
     public boolean stopAll() {
@@ -174,7 +176,7 @@ public class ServerManager {
             try {
                 CompletableFuture.allOf(stopFutures.toArray(new CompletableFuture[0])).get();
             } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+                log.error("Error while stopping servers", e);
                 return false;
             }
         }

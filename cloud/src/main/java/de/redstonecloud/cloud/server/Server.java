@@ -15,6 +15,7 @@ import de.redstonecloud.cloud.utils.Translator;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import de.redstonecloud.api.redis.cache.Cacheable;
 
@@ -28,6 +29,7 @@ import java.util.*;
 
 @Builder
 @Getter
+@Log4j2
 public class Server implements ICloudServer, Cacheable {
     public Template template;
     public String name;
@@ -100,7 +102,7 @@ public class Server implements ICloudServer, Cacheable {
                 name = template.getName() + "-" + forceId;
                 return;
             } else {
-                RedstoneCloud.getLogger().error("Server with name " + template.getName() + "-" + forceId + " already exists, trying to find a new name...");
+                log.error("Server with name " + template.getName() + "-" + forceId + " already exists, trying to find a new name...");
             }
         }
 
@@ -121,7 +123,7 @@ public class Server implements ICloudServer, Cacheable {
 
         if(name == null) initName(null);
 
-        RedstoneCloud.getLogger().debug(Translator.translate("cloud.server.prepare", name));
+        log.info(Translator.translate("cloud.server.prepare", name));
 
         if (!template.isStaticServer()) directory = Path.of(RedstoneCloud.workingDir + "/tmp/" + name).toString();
         else directory = Path.of(RedstoneCloud.workingDir + "/servers/" + name).toString();
@@ -135,7 +137,7 @@ public class Server implements ICloudServer, Cacheable {
         try {
             FileUtils.copyDirectory(templateDir, new File(directory));
         } catch (Exception e) {
-            RedstoneCloud.getLogger().error("Failed to copy files from template to server directory for server " + name + " with template " + template.getName() + ".");
+            log.error("Failed to copy files from template to server directory for server " + name + " with template " + template.getName() + ".");
             e.printStackTrace();
         }
 
@@ -155,7 +157,7 @@ public class Server implements ICloudServer, Cacheable {
     public void onExit() {
         if (logger != null) logger.cancel();
 
-        RedstoneCloud.getLogger().debug(Translator.translate("cloud.server.exited", name));
+        log.info(Translator.translate("cloud.server.exited", name));
 
         process.destroy();
         status = ServerStatus.STOPPED;
@@ -199,7 +201,7 @@ public class Server implements ICloudServer, Cacheable {
             return;
         }
 
-        RedstoneCloud.getLogger().debug(Translator.translate("cloud.server.starting", name));
+        log.info(Translator.translate("cloud.server.starting", name));
         setStatus(ServerStatus.STARTING);
 
         processBuilder = new ProcessBuilder(
@@ -232,7 +234,7 @@ public class Server implements ICloudServer, Cacheable {
             protected void onRun(long currentMillis) {
                 if (process.isAlive()) {
                     process.destroyForcibly();
-                    RedstoneCloud.getLogger().debug(name + " didn't stop in time. killing process...");
+                    log.info(name + " didn't stop in time. killing process...");
                 }
             }
         }, template.getShutdownTimeMs());
@@ -240,7 +242,7 @@ public class Server implements ICloudServer, Cacheable {
 
     @Override
     public void stop() {
-        RedstoneCloud.getLogger().debug(Translator.translate("cloud.server.stopping", name));
+        log.info(Translator.translate("cloud.server.stopping", name));
         if (logger != null) logger.cancel();
         if (status.getValue() != ServerStatus.RUNNING.getValue()) {
             return;

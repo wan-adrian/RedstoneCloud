@@ -1,8 +1,9 @@
 package de.redstonecloud.cloud.commands.defaults;
 
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.logger.Logger;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class EndCommand extends Command {
     public EndCommand(String cmd) {
         super(cmd);
@@ -10,7 +11,7 @@ public class EndCommand extends Command {
 
     @Override
     protected void onCommand(String[] args) {
-        Logger.getInstance().info("Stopping Cloud using command...");
+        log.info("Stopping Cloud using command...");
         this.getServer().stop();
     }
 }
