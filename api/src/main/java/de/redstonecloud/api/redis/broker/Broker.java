@@ -70,6 +70,7 @@ public class Broker {
     private void initJedis(String... routes) {
         String address = System.getenv("REDIS_IP") != null ? System.getenv("REDIS_IP") : System.getProperty("redis.bind");
         int port = Integer.parseInt(System.getenv("REDIS_PORT") != null ? System.getenv("REDIS_PORT") : System.getProperty("redis.port"));
+        int db = Integer.parseInt(System.getenv("REDIS_DB") != null ? System.getenv("REDIS_DB") : System.getProperty("redis.db"));
 
         JedisPoolConfig config = new JedisPoolConfig();
         config.setMinIdle(4);
@@ -80,13 +81,15 @@ public class Broker {
         config.setMaxWait(Duration.ofSeconds(1));
         config.setTestOnReturn(true);
 
-        this.pool = new JedisPool(config, address, port, 0);
+        this.pool = new JedisPool(config, address, port, 0, null, db);
 
         running = true;
 
         new Thread(() -> {
             while (running) { // Keep the subscriber alive
                 try (Jedis jedis = new Jedis(address, port, 0)) { // Use try-with-resources for safe closing
+                    jedis.select(db); // Select the correct database
+
                     this.subscriber = jedis; // Save the subscriber instance if needed elsewhere
                     System.out.println("Connecting to Redis...");
 

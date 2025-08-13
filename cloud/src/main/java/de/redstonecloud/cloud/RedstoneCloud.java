@@ -59,6 +59,7 @@ public class RedstoneCloud {
         usingIntRedis = !CloudConfig.getCfg().get("custom_redis").getAsBoolean();
         System.setProperty("redis.port", CloudConfig.getCfg().get("redis_port").getAsString());
         System.setProperty("redis.bind", CloudConfig.getCfg().get("redis_bind").getAsString());
+        System.setProperty("redis.db", CloudConfig.getCfg().get("redis_db").getAsString());
 
         if(usingIntRedis) {
             try {
@@ -180,7 +181,7 @@ public class RedstoneCloud {
             log.info(Translator.translate("cloud.shutdown.plugins"));
             this.eventManager.getThreadedExecutor().shutdown();
             log.info(Translator.translate("cloud.shutdown.complete"));
-            broker.getPool().getResource().flushAll();
+            broker.getPool().getResource().flushDB();
             broker.shutdown();
             this.scheduler.stopScheduler();
             if(usingIntRedis) redisServer.stop();

@@ -103,12 +103,14 @@ public class Utils {
         boolean useBuiltIn;
         String bind;
         int port;
+        int db;
         boolean downloadUpdate;
 
-        RedisConfig(boolean useBuiltIn, String bind, int port, boolean downloadUpdate) {
+        RedisConfig(boolean useBuiltIn, String bind, int port, int db, boolean downloadUpdate) {
             this.useBuiltIn = useBuiltIn;
             this.bind = bind;
             this.port = port;
+            this.db = db;
             this.downloadUpdate = downloadUpdate;
         }
     }
@@ -117,6 +119,7 @@ public class Utils {
         boolean redis = true;
         int intRedisPort = 6379;
         String redisBind = "127.0.0.1";
+        int intRedisDb = 0;
         boolean downloadRedis = true;
 
         log.info("RedstoneCloud comes with a built-in redis instance. Would you like to use it? [y/n] (default: y): ");
@@ -141,7 +144,17 @@ public class Utils {
             log.warn("Provided invalid port, using default port.");
         }
 
-        return new RedisConfig(redis, redisBind, intRedisPort, downloadRedis);
+        log.info("Please provide a redis database you want to use [default: 0]: ");
+        try {
+            String dbInput = input.nextLine();
+            if (!dbInput.isEmpty()) {
+                intRedisDb = Integer.parseInt(dbInput);
+            }
+        } catch (Exception e) {
+            log.warn("Provided invalid database, using default database.");
+        }
+
+        return new RedisConfig(redis, redisBind, intRedisPort, intRedisDb, downloadRedis);
     }
 
     private static void createBaseStructure() {
@@ -304,6 +317,7 @@ public class Utils {
         log.info("====================");
         log.info("Built-in redis: {}", redisConfig.useBuiltIn);
         log.info("Built-in redis port: {}", redisConfig.port);
+        log.info("Built-in redis db: {}", redisConfig.db);
         log.info("Updated built-in redis: {}", redisConfig.downloadUpdate);
         log.info("Setup proxy: {}", setupProxy);
         log.info("Setup server: {}", setupServer);
@@ -315,6 +329,7 @@ public class Utils {
             JsonObject cfgFile = CloudConfig.getCfg();
             cfgFile.addProperty("redis_port", redisConfig.port);
             cfgFile.addProperty("redis_bind", redisConfig.bind);
+            cfgFile.addProperty("redis_db", redisConfig.db);
             cfgFile.addProperty("custom_redis", !redisConfig.useBuiltIn);
 
             Files.writeString(Paths.get(RedstoneCloud.workingDir + "/cloud.json"), cfgFile.toString());
