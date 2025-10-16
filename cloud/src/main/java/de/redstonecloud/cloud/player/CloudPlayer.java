@@ -2,14 +2,21 @@ package de.redstonecloud.cloud.player;
 
 import com.google.common.net.HostAndPort;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.redstonecloud.api.components.ICloudPlayer;
 import de.redstonecloud.api.components.ICloudServer;
+import de.redstonecloud.api.components.ServerActions;
+import de.redstonecloud.api.components.cache.PlayerData;
+import de.redstonecloud.api.redis.broker.packet.defaults.server.ServerActionPacket;
 import de.redstonecloud.api.redis.cache.Cacheable;
+import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.server.Server;
 import lombok.Builder;
 import lombok.Setter;
 import org.json.JSONObject;
+
+import java.util.UUID;
 
 @Setter
 @Builder
@@ -18,19 +25,20 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
     protected HostAndPort address;
     private Server network;
     private Server server;
-    protected String uuid;
+    protected UUID uuid;
     @Builder.Default
-    public JsonElement customData = new JsonParser().parse("{}");
+    public JsonObject extraData = new JsonObject();
 
     @Override
     public String toString() {
-        JSONObject obj = new JSONObject()
-                .put("name", name)
-                .put("uuid", uuid)
-                .put("address", address.toString())
-                .put("network", network != null ? network.getName() : "null")
-                .put("server", server != null ? server.getName() : "null")
-                .put("customData", customData.toString());
+        JsonObject obj = new PlayerData(
+                name,
+                uuid,
+                address.toString(),
+                network != null ? network.getName() : null,
+                server != null ? server.getName() : null,
+                extraData
+        ).toJson();
 
         return obj.toString();
     }
@@ -55,37 +63,37 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
         long updateMS = System.currentTimeMillis();
 
         if(server != null) {
-            server.players.remove(uuid);
+            server.getPlayers().remove(uuid);
             server.updateCache();
-            server.lastPlayerUpdate = updateMS;
+            server.setLastPlayerUpdate(updateMS);
         }
         server = srv;
         updateCache();
-        if(srv != null && !srv.players.contains(uuid)) {
-            srv.players.add(uuid);
+        if(srv != null && !srv.getPlayers().contains(uuid)) {
+            srv.getPlayers().add(uuid);
             srv.updateCache();
-            server.lastPlayerUpdate = updateMS;
+            server.setLastPlayerUpdate(updateMS);
         }
     }
 
     public void setConnectedNetwork(Server srv) {
         long updateMS = System.currentTimeMillis();
         if(network != null) {
-            network.players.remove(uuid);
+            network.getPlayers().remove(uuid);
             network.updateCache();
-            network.lastPlayerUpdate = updateMS;
+            network.setLastPlayerUpdate(updateMS);
         }
         network = srv;
         updateCache();
-        if(srv != null && !srv.players.contains(uuid)) {
-            srv.players.add(uuid);
+        if(srv != null && !srv.getPlayers().contains(uuid)) {
+            srv.getPlayers().add(uuid);
             srv.updateCache();
-            network.lastPlayerUpdate = updateMS;
+            network.setLastPlayerUpdate(updateMS);
         }
     }
 
     @Override
-    public String getUUID() {
+    public UUID getUUID() {
         return uuid;
     }
 
@@ -96,6 +104,15 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
 
     @Override
     public void connect(String server) {
+        JsonObject extraData = new JsonObject();
+        extraData.addProperty("server", server);
+
+        new ServerActionPacket()
+                .setAction(ServerActions.PLAYER_CONNECT.name())
+                .setPlayerUuid(uuid.toString())
+                .setExtraData(extraData)
+                .setTo(network.getName())
+                .send();
     }
 
     @Override
@@ -110,6 +127,6 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
 
     @Override
     public String cacheKey() {
-        return "player:" + uuid;
+        return Keys.CACHE_PREFIX_PLAYER + uuid;
     }
 }

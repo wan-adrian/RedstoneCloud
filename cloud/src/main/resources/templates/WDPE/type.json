@@ -4,5 +4,6 @@
   "logsPath": "logs/server.log",
   "portSettingPlaceholder": "[port]",
   "portSettingFile": "config.yml",
-  "isProxy": true
+  "isProxy": true,
+  "stopCommand": "end"
 }

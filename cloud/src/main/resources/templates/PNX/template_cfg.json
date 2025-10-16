@@ -4,5 +4,9 @@
   "maxPlayers": 20,
   "minServers": 1,
   "maxServers": 1,
-  "staticServer": false
+  "staticServer": false,
+  "seperator": "-",
+  "shutdownTimeMs": 5000,
+  "maxBootTimeMs": 60000,
+  "stopOnEmpty": false
 }

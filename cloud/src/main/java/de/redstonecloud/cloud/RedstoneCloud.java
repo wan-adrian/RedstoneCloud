@@ -3,18 +3,21 @@ package de.redstonecloud.cloud;
 import de.redstonecloud.api.encryption.KeyManager;
 import de.redstonecloud.api.encryption.cache.KeyCache;
 import de.redstonecloud.api.redis.broker.BrokerHelper;
+import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.config.CloudConfig;
+import de.redstonecloud.cloud.config.entry.RedisEntry;
 import de.redstonecloud.cloud.events.EventManager;
 import de.redstonecloud.cloud.player.PlayerManager;
 import de.redstonecloud.cloud.plugin.PluginManager;
 import de.redstonecloud.cloud.redis.PacketHandler;
-import de.redstonecloud.cloud.scheduler.task.Task;
-import de.redstonecloud.cloud.server.ServerLogger;
+import de.redstonecloud.cloud.redis.RedisInstance;
+import de.redstonecloud.cloud.server.reader.ServerOutReader;
 import de.redstonecloud.cloud.commands.CommandManager;
 import de.redstonecloud.cloud.console.Console;
 import de.redstonecloud.cloud.scheduler.TaskScheduler;
 import de.redstonecloud.cloud.scheduler.defaults.CheckTemplateTask;
 import de.redstonecloud.cloud.server.ServerManager;
+import de.redstonecloud.cloud.utils.Directories;
 import de.redstonecloud.cloud.utils.Translator;
 import de.redstonecloud.cloud.utils.Utils;
 import lombok.Getter;
@@ -23,16 +26,9 @@ import de.redstonecloud.api.redis.broker.Broker;
 import de.redstonecloud.api.redis.cache.Cache;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import redis.embedded.RedisServer;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.security.PublicKey;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 
 @Getter
 @Log4j2
@@ -43,10 +39,10 @@ public class RedstoneCloud {
     public static String workingDir;
     @Getter
     public static Cache cache;
+    private static RedisInstance redisInstance;
     @Getter
-    public static boolean running = false;
-    private static RedisServer redisServer;
-    private static boolean usingIntRedis;
+    private static boolean running = false;
+
 
     @Getter private static Broker broker;
 
@@ -54,22 +50,15 @@ public class RedstoneCloud {
     public static void main(String[] args) {
         workingDir = System.getProperty("user.dir");
 
-        if (!new File("./.cloud.setup").exists()) Utils.setup();
+        if (!Directories.setupCheck.exists()) Utils.setup();
 
-        usingIntRedis = !CloudConfig.getCfg().get("custom_redis").getAsBoolean();
-        System.setProperty("redis.port", CloudConfig.getCfg().get("redis_port").getAsString());
-        System.setProperty("redis.bind", CloudConfig.getCfg().get("redis_bind").getAsString());
+        RedisEntry redisCfg = CloudConfig.getRedis();
 
-        if(usingIntRedis) {
-            try {
-                redisServer = RedisServer.builder()
-                        .port(CloudConfig.getCfg().get("redis_port").getAsInt())
-                        .setting("bind " + CloudConfig.getCfg().get("redis_bind").getAsString())
-                        .build();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            redisServer.start();
+        System.setProperty(Keys.PROPERTY_REDIS_PORT, redisCfg.port());
+        System.setProperty(Keys.PROPERTY_REDIS_IP, redisCfg.ip());
+
+        if(redisCfg.useInternal()) {
+            redisInstance = new RedisInstance();
         }
 
         Thread.sleep(2000);
@@ -82,8 +71,8 @@ public class RedstoneCloud {
 
             broker.listen("cloud", PacketHandler::handle);
         } catch (Exception e) {
-            log.error(System.getenv("REDIS_IP") != null ? System.getenv("REDIS_IP") : System.getProperty("redis.bind"));
-            log.error(System.getenv("REDIS_PORT") != null ? System.getenv("REDIS_PORT") : System.getProperty("redis.port"));
+            log.error(System.getenv(Keys.ENV_REDIS_IP) != null ? System.getenv(Keys.ENV_REDIS_IP) : System.getProperty(Keys.PROPERTY_REDIS_IP));
+            log.error(System.getenv(Keys.ENV_REDIS_PORT) != null ? System.getenv(Keys.ENV_REDIS_PORT) : System.getProperty(Keys.PROPERTY_REDIS_PORT));
             throw new RuntimeException("Cannot connect to Redis: " + e);
         }
 
@@ -100,7 +89,7 @@ public class RedstoneCloud {
 
     private ConsoleThread consoleThread;
     @Setter
-    protected ServerLogger currentLogServer = null;
+    protected ServerOutReader currentLogServer = null;
     protected PlayerManager playerManager;
     protected ServerManager serverManager;
     protected CommandManager commandManager;
@@ -118,18 +107,6 @@ public class RedstoneCloud {
         boot();
     }
 
-
-    public static void createBaseFolders() {
-        String[] dirs = {"./servers", "./templates", "./tmp", "./logs", "./plugins", "./template_configs", "./types"};
-
-        for (String dir : dirs) {
-            File f = new File(dir);
-            if (!f.exists()) {
-                f.mkdir();
-            }
-        }
-    }
-
     public void boot() {
         running = true;
 
@@ -141,7 +118,7 @@ public class RedstoneCloud {
 
         log.info(Translator.translate("cloud.startup"));
 
-        createBaseFolders();
+        Utils.createBaseFolders();
 
         this.playerManager = new PlayerManager();
         this.serverManager = ServerManager.getInstance();
@@ -175,15 +152,17 @@ public class RedstoneCloud {
             Thread.sleep(200);
             log.info(Translator.translate("cloud.shutdown.started"));
             boolean a = this.serverManager.stopAll();
-            if (a) log.info(Translator.translate("cloud.shutdown.servers"));
+            if(a) log.info(Translator.translate("cloud.shutdown.servers"));
+            Thread.sleep(500);
             this.pluginManager.disableAllPlugins();
             log.info(Translator.translate("cloud.shutdown.plugins"));
             this.eventManager.getThreadedExecutor().shutdown();
             log.info(Translator.translate("cloud.shutdown.complete"));
+            this.scheduler.stopScheduler();
+
             broker.getPool().getResource().flushAll();
             broker.shutdown();
-            this.scheduler.stopScheduler();
-            if(usingIntRedis) redisServer.stop();
+            if(redisInstance != null) redisInstance.shutdown();
         } catch (InterruptedException e) {
             log.error("Error during shutdown: ", e);
         } catch (Exception e) {

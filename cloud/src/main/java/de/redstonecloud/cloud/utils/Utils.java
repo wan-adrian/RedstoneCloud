@@ -116,19 +116,19 @@ public class Utils {
         String redisBind = "127.0.0.1";
         boolean downloadRedis = true;
 
-        log.info("RedstoneCloud comes with a built-in redis instance. Would you like to use it? [y/n] (default: y): ");
+        System.out.println("RedstoneCloud comes with a built-in redis instance. Would you like to use it? [y/n] (default: y): ");
         String result = input.nextLine();
         if (result.toLowerCase().contains("n")) {
             redis = false;
         }
 
-        log.info("Please provide an IP redis should bind to [127.0.0.1, 0.0.0.0] (default: 127.0.0.1): ");
+        System.out.println("Please provide an IP redis should bind to [127.0.0.1, 0.0.0.0] (default: 127.0.0.1): ");
         String bindInput = input.nextLine();
         if (!bindInput.isEmpty()) {
             redisBind = bindInput;
         }
 
-        log.info("Please provide a redis port you want to use [default: 6379]: ");
+        System.out.println("Please provide a redis port you want to use [default: 6379]: ");
         try {
             String portInput = input.nextLine();
             if (!portInput.isEmpty()) {
@@ -142,9 +142,9 @@ public class Utils {
     }
 
     private static void createBaseStructure() {
-        log.info("Settings completed. Generating basic file structure...");
-        RedstoneCloud.createBaseFolders();
-        log.info("Basic folders generated. Starting server config...");
+        System.out.println("Settings completed. Generating basic file structure...");
+        createBaseFolders();
+        System.out.println("Basic folders generated. Starting server config...");
     }
 
     private static JsonObject loadSupportedSoftware(Gson gson) {
@@ -152,20 +152,21 @@ public class Utils {
             JsonObject supportedSoftware = gson.fromJson(Utils.readFileFromResources("supportedSoftware.json"), JsonObject.class);
 
             if (supportedSoftware == null) {
-                log.error("Output of supportedSoftware.json is null, shutting down...");
+                System.err.println("Output of supportedSoftware.json is null, shutting down...");
                 System.exit(0);
             }
 
             return supportedSoftware;
         } catch (Exception e) {
-            log.error("Error while reading supportedSoftware.json, shutting down...", e);
+            System.err.println("Error while reading supportedSoftware.json, shutting down...");
+            e.printStackTrace();
             System.exit(0);
             return null; // unreachable, but required
         }
     }
 
     private static boolean setupProxyInstance(Scanner input, Gson gson, JsonObject supportedSoftware) {
-        log.info("Would you like to setup a proxy instance? [y/n] (default: y): ");
+        System.out.println("Would you like to setup a proxy instance? [y/n] (default: y): ");
         String result = input.nextLine();
 
         if (result.toLowerCase().contains("n")) {
@@ -179,7 +180,7 @@ public class Utils {
     }
 
     private static boolean setupServerInstance(Scanner input, Gson gson, JsonObject supportedSoftware) {
-        log.info("Would you like to setup a server instance? [y/n] (default: y): ");
+        System.out.println("Would you like to setup a server instance? [y/n] (default: y): ");
         String result = input.nextLine();
 
         if (result.toLowerCase().contains("n")) {
@@ -193,8 +194,7 @@ public class Utils {
     }
 
     private static String selectSoftware(Scanner input, JsonObject supportedSoftware, String type) {
-        log.info("Please select a {} software you want to use {}", type,
-                supportedSoftware.get(type).getAsJsonArray().toString().replace("\"", ""));
+        System.out.println("Please select a " + type +" software you want to use " + supportedSoftware.get(type).getAsJsonArray().toString().replace("\"", ""));
 
         String result = input.nextLine();
         String finalResult = result.toUpperCase();
@@ -211,22 +211,23 @@ public class Utils {
     }
 
     private static void installSoftware(Gson gson, String software, String templateName, String jarName) {
-        log.info("Generating structure for {}...", software);
+        System.out.println("Generating structure for " + software + "...");
 
         try {
             JsonObject settings = gson.fromJson(Utils.readFileFromResources("templates/" + software + "/settings.json"), JsonObject.class);
 
             copyTemplateFiles(software, templateName);
-            log.info("Copied important files, downloading software...");
+            System.out.println("Copied important files, downloading software...");
 
             downloadSoftware(software, templateName, jarName);
-            log.info("Downloaded software successfully.");
+            System.out.println("Downloaded software successfully.");
 
             installCloudBridge(software, templateName, settings);
-            log.info("{} installed successfully.\n", templateName);
+            System.out.println(templateName + " installed successfully.\n");
 
         } catch (Exception e) {
-            log.error("Cannot setup {}, shutting down...", templateName.toLowerCase(), e);
+            System.err.println("Cannot setup " + templateName + ", shutting down...");
+            e.printStackTrace();
             System.exit(0);
         }
     }
@@ -247,7 +248,7 @@ public class Utils {
     }
 
     private static void installCloudBridge(String software, String templateName, JsonObject settings) throws IOException {
-        log.info("Installing CloudBridge on {}...", templateName);
+        System.out.println("Installing CloudBridge on " + templateName + "...");
 
         String bridgeUrl = Utils.readFileFromResources("templates/" + software + "/download_url_bridge.txt");
         String pluginDir = settings.get("pluginDir").getAsString();
@@ -255,32 +256,33 @@ public class Utils {
         FileUtils.copyURLToFile(URI.create(bridgeUrl).toURL(),
                 new File("./templates/" + templateName + "/" + pluginDir + "/CloudBridge.jar"));
 
-        log.info("Installed CloudBridge.");
+        System.out.println("Installed CloudBridge.");
     }
 
     private static void copyCloudFiles() {
-        log.info("Copying cloud setup files...");
+        System.out.println("Copying cloud setup files...");
 
         try {
             FileUtils.copyURLToFile(Utils.getResourceFile("cloud.json"), new File("./cloud.json"));
             FileUtils.copyURLToFile(Utils.getResourceFile("language.json"), new File("./language.json"));
-            log.info("Copied cloud files.");
+            System.out.println("Copied cloud files.");
         } catch (IOException e) {
-            log.error("Copying cloud files failed, shutting down...", e);
+            System.err.println("Copying cloud files failed, shutting down...");
+            e.printStackTrace();
             System.exit(0);
         }
     }
 
     private static void showSummary(RedisConfig redisConfig, boolean setupProxy, boolean setupServer) {
-        log.info("");
-        log.info("Cloud setup completed.");
-        log.info("====================");
-        log.info("Built-in redis: {}", redisConfig.useBuiltIn);
-        log.info("Built-in redis port: {}", redisConfig.port);
-        log.info("Updated built-in redis: {}", redisConfig.downloadUpdate);
-        log.info("Setup proxy: {}", setupProxy);
-        log.info("Setup server: {}", setupServer);
-        log.info("====================");
+        System.out.println("");
+        System.out.println("Cloud setup completed.");
+        System.out.println("====================");
+        System.out.println("Built-in redis: " + redisConfig.useBuiltIn);
+        System.out.println("Built-in redis port: " + redisConfig.port);
+        System.out.println("Updated built-in redis: " + redisConfig.downloadUpdate);
+        System.out.println("Setup proxy: " + setupProxy);
+        System.out.println("Setup server: " + setupServer);
+        System.out.println("====================");
     }
 
     private static void finalizeSetup(RedisConfig redisConfig) {
@@ -301,13 +303,25 @@ public class Utils {
     }
 
     private static void waitForUserToStart() {
-        log.info("");
-        log.info("Please press Enter to start the cloud.");
+        System.out.println("");
+        System.out.println("Please press Enter to start the cloud.");
 
         try {
             System.in.read(new byte[2]);
         } catch (IOException e) {
-            log.error("Error waiting for input", e);
+            System.err.println("Error waiting for input");
+            e.printStackTrace();
+        }
+    }
+
+    public static void createBaseFolders() {
+        String[] dirs = {"./servers", "./templates", "./tmp", "./logs", "./plugins", "./template_configs", "./types"};
+
+        for (String dir : dirs) {
+            File f = new File(dir);
+            if (!f.exists()) {
+                f.mkdir();
+            }
         }
     }
 }
