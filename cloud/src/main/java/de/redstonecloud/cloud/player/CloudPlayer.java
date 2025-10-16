@@ -99,7 +99,15 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
 
     @Override
     public void sendMessage(String message) {
+        JsonObject extraData = new JsonObject();
+        extraData.addProperty("message", message);
 
+        new ServerActionPacket()
+                .setAction(ServerActions.PLAYER_SEND_MESSAGE.name())
+                .setPlayerUuid(uuid.toString())
+                .setExtraData(extraData)
+                .setTo(network.getName())
+                .send();
     }
 
     @Override
@@ -117,7 +125,15 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
 
     @Override
     public void disconnect(String reason) {
+        JsonObject extraData = new JsonObject();
+        extraData.addProperty("reason", reason);
 
+        new ServerActionPacket()
+                .setAction(ServerActions.PLAYER_KICK.name())
+                .setPlayerUuid(uuid.toString())
+                .setExtraData(extraData)
+                .setTo(network.getName())
+                .send();
     }
 
     @Override

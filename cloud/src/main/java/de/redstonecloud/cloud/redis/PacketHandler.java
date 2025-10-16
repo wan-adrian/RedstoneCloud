@@ -73,6 +73,7 @@ public class PacketHandler {
             if (server.getType().isProxy()) p.setConnectedNetwork(server);
             else {
                 RedstoneCloud.getInstance().getEventManager().callEvent(new PlayerTransferEvent(p, (Server) p.getConnectedServer(), server));
+                log.info("no proxy <>");
                 p.setConnectedServer(server);
             }
 
