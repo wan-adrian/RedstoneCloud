@@ -37,7 +37,11 @@ public class PlayerManager {
         }
     }
 
-    public CloudPlayer getPlayer(String uuid) {
+    public CloudPlayer getPlayer(UUID uuid) {
         return players.get(uuid);
+    }
+
+    public CloudPlayer getPlayer(String name) {
+        return playersByName.get(name);
     }
 }
