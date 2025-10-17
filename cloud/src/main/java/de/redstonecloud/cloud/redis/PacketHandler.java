@@ -1,6 +1,7 @@
 package de.redstonecloud.cloud.redis;
 
 import com.google.common.net.HostAndPort;
+import com.google.gson.JsonObject;
 import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.api.redis.broker.packet.Packet;
 import de.redstonecloud.api.redis.broker.packet.defaults.communication.ClientAuthPacket;
@@ -60,10 +61,13 @@ public class PacketHandler {
 
         if (server != null) {
             if (p == null) {
+                JsonObject debug = new JsonObject();
+                debug.addProperty("ms", System.currentTimeMillis());
                 p = CloudPlayer.builder()
                         .name(packet.getPlayerName())
-                        .uuid(UUID.fromString(packet.getUuid()))
+                        .uuid(packet.getUuid())
                         .address(HostAndPort.fromParts(packet.getIpAddress(), 1))
+                        .extraData(debug)
                         .build();
 
                 PlayerManager.getInstance().addPlayer(p);
@@ -73,7 +77,6 @@ public class PacketHandler {
             if (server.getType().isProxy()) p.setConnectedNetwork(server);
             else {
                 RedstoneCloud.getInstance().getEventManager().callEvent(new PlayerTransferEvent(p, (Server) p.getConnectedServer(), server));
-                log.info("no proxy <>");
                 p.setConnectedServer(server);
             }
 

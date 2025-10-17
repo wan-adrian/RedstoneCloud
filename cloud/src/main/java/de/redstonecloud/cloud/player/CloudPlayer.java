@@ -8,6 +8,7 @@ import de.redstonecloud.api.components.ICloudPlayer;
 import de.redstonecloud.api.components.ICloudServer;
 import de.redstonecloud.api.components.ServerActions;
 import de.redstonecloud.api.components.cache.PlayerData;
+import de.redstonecloud.api.redis.broker.packet.Packet;
 import de.redstonecloud.api.redis.broker.packet.defaults.server.ServerActionPacket;
 import de.redstonecloud.api.redis.cache.Cacheable;
 import de.redstonecloud.api.util.Keys;
@@ -132,8 +133,7 @@ public class CloudPlayer implements ICloudPlayer, Cacheable {
                 .setAction(ServerActions.PLAYER_KICK.name())
                 .setPlayerUuid(uuid.toString())
                 .setExtraData(extraData)
-                .setTo(network.getName())
-                .send();
+                .setTo(network.getName()).send();
     }
 
     @Override
