@@ -15,6 +15,7 @@ public class RedisInstance {
 
 
     public RedisInstance() {
+        if(redisServer != null) return;
         try {
             redisServer = RedisServer.builder()
                     .port(CloudConfig.getCfg().get("redis_port").getAsInt())

@@ -335,6 +335,7 @@ public class Server implements ICloudServer, Cacheable {
         Map<String, String> env = processBuilder.environment();
         env.put(Keys.ENV_REDIS_IP, redisCfg.ip());
         env.put(Keys.ENV_REDIS_PORT, redisCfg.port());
+        env.put(Keys.ENV_REDIS_DB, String.valueOf(redisCfg.db()));
         env.put("BRIDGE_CFG", CloudConfig.getCfg().get("bridge").getAsJsonObject().toString());
     }
 
