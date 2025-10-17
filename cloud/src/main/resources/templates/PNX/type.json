@@ -5,5 +5,7 @@
   "portSettingPlaceholder": "[port]",
   "portSettingFile": "pnx.yml",
   "isProxy": false,
-  "stopCommand": "stop"
+  "stopCommand": "stop",
+  "download_url": "https://github.com/PowerNukkitX/PowerNukkitX/releases/download/snapshot/powernukkitx-shaded.jar",
+  "download_url_bridge": "https://github.com/RedstoneCloud/CloudBridge/releases/download/snapshot/cloudbridge.jar"
 }

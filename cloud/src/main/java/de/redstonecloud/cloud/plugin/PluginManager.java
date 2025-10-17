@@ -1,6 +1,8 @@
 package de.redstonecloud.cloud.plugin;
 
 import de.redstonecloud.cloud.RedstoneCloud;
+import de.redstonecloud.cloud.server.ServerManager;
+import de.redstonecloud.cloud.server.ServerType;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
@@ -19,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Log4j2
@@ -61,14 +64,36 @@ public class PluginManager {
         };
 
         Map<PluginData, Path> plugins = new TreeMap<>(comparator);
-        try (Stream<Path> stream = Files.walk(folderPath)){
-            stream.filter(Files::isRegularFile).filter(PluginLoader::isJarFile).forEach(jarPath -> {
-                PluginData config = this.loadPluginConfig(jarPath);
-                if (config != null) {
-                    plugins.put(config, jarPath);
-                }
-            });
+
+        Set<String> serverTypeNames = ServerManager.getInstance().getTypes()
+                .values()
+                .stream()
+                .map(ServerType::name)
+                .collect(Collectors.toSet());
+
+        try (Stream<Path> stream = Files.walk(folderPath)) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .filter(PluginLoader::isJarFile)
+                    .filter(jarPath -> {
+                        Path parent = jarPath.getParent();
+                        while (parent != null && !parent.equals(folderPath)) {
+                            if (serverTypeNames.contains(parent.getFileName().toString())) {
+                                log.debug("Skipping plugin in server-type-specific folder: " + jarPath);
+                                return false;
+                            }
+                            parent = parent.getParent();
+                        }
+                        return true;
+                    })
+                    .forEach(jarPath -> {
+                        PluginData config = this.loadPluginConfig(jarPath);
+                        if (config != null) {
+                            plugins.put(config, jarPath);
+                        }
+                    });
         }
+
         plugins.forEach(this::registerClassLoader);
     }
 

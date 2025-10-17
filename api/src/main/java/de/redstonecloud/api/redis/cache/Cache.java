@@ -24,8 +24,9 @@ public class Cache {
 
         String addr = System.getenv("REDIS_IP") != null ? System.getenv("REDIS_IP") : System.getProperty("redis.bind");
         int port = Integer.parseInt(System.getenv("REDIS_PORT") != null ? System.getenv("REDIS_PORT") : System.getProperty("redis.port"));
+        int db = Integer.parseInt(System.getenv("REDIS_DB") != null ? System.getenv("REDIS_DB") : System.getProperty("redis.db"));
 
-        singletonPool = new JedisPool(config, addr, port);
+        singletonPool = new JedisPool(config, addr, port, 0, null, db);
     }
 
     protected JedisPool pool;

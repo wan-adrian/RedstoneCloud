@@ -5,5 +5,7 @@
   "portSettingPlaceholder": "[port]",
   "portSettingFile": "config.yml",
   "isProxy": true,
-  "stopCommand": "end"
+  "stopCommand": "end",
+  "download_url": "https://github.com/WaterdogPE/WaterdogPE/releases/download/latest/Waterdog.jar",
+  "download_url_bridge": "https://github.com/RedstoneCloud/CloudBridge/releases/download/snapshot/cloudbridge.jar"
 }

@@ -1,1 +1,0 @@
-https://github.com/RedstoneCloud/CloudBridge/releases/download/snapshot/cloudbridge.jar

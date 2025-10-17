@@ -4,7 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.config.CloudConfig;
-import lombok.extern.slf4j.Slf4j;
+import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.cloud.server.Template;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -16,12 +17,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Scanner;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-@Slf4j
 public class Utils {
     public static String[] dropFirstString(String[] input) {
         String[] anstring = new String[input.length - 1];
@@ -30,14 +31,12 @@ public class Utils {
     }
 
     public static String readFileFromResources(String filename) throws IOException {
-        // Use getResourceAsStream to read the file from the JAR or file system
         try (InputStream inputStream = RedstoneCloud.class.getClassLoader().getResourceAsStream(filename)) {
             if (inputStream == null) {
                 throw new IllegalArgumentException("File not found! " + filename);
             }
-            // Use a Scanner to read the InputStream as a String
-            try (Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8.name())) {
-                return scanner.useDelimiter("\\A").next(); // Read entire file as a single string
+            try (Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8)) {
+                return scanner.useDelimiter("\\A").next();
             }
         }
     }
@@ -51,7 +50,6 @@ public class Utils {
         File jarFile = new File(jarUrl.toURI());
 
         if (jarFile.isFile()) {
-            // If the application is running from a JAR file
             try (JarFile jar = new JarFile(jarFile)) {
                 Enumeration<JarEntry> entries = jar.entries();
 
@@ -59,14 +57,11 @@ public class Utils {
                     JarEntry entry = entries.nextElement();
                     String entryName = entry.getName();
 
-                    // Check if the entry is part of the folder you want to copy
                     if (entryName.startsWith(folderInJar)) {
                         File destFile = new File(destDir, entryName.substring(folderInJar.length()));
                         if (entry.isDirectory()) {
-                            // Create the directory
                             FileUtils.forceMkdir(destFile);
                         } else {
-                            // Copy the file
                             try (InputStream is = jar.getInputStream(entry)) {
                                 FileUtils.copyInputStreamToFile(is, destFile);
                             }
@@ -100,12 +95,14 @@ public class Utils {
         boolean useBuiltIn;
         String bind;
         int port;
+        int db;
         boolean downloadUpdate;
 
-        RedisConfig(boolean useBuiltIn, String bind, int port, boolean downloadUpdate) {
+        RedisConfig(boolean useBuiltIn, String bind, int port, int db, boolean downloadUpdate) {
             this.useBuiltIn = useBuiltIn;
             this.bind = bind;
             this.port = port;
+            this.db = db;
             this.downloadUpdate = downloadUpdate;
         }
     }
@@ -114,6 +111,7 @@ public class Utils {
         boolean redis = true;
         int intRedisPort = 6379;
         String redisBind = "127.0.0.1";
+        int intRedisDb = 0;
         boolean downloadRedis = true;
 
         System.out.println("RedstoneCloud comes with a built-in redis instance. Would you like to use it? [y/n] (default: y): ");
@@ -135,10 +133,20 @@ public class Utils {
                 intRedisPort = Integer.parseInt(portInput);
             }
         } catch (Exception e) {
-            log.warn("Provided invalid port, using default port.");
+            System.err.println("Provided invalid port, using default port.");
         }
 
-        return new RedisConfig(redis, redisBind, intRedisPort, downloadRedis);
+        System.out.println("Please provide a redis database you want to use [default: 0]: ");
+        try {
+            String dbInput = input.nextLine();
+            if (!dbInput.isEmpty()) {
+                intRedisDb = Integer.parseInt(dbInput);
+            }
+        } catch (Exception e) {
+            System.err.println("Provided invalid database, using default database.");
+        }
+
+        return new RedisConfig(redis, redisBind, intRedisPort, intRedisDb, downloadRedis);
     }
 
     private static void createBaseStructure() {
@@ -150,18 +158,16 @@ public class Utils {
     private static JsonObject loadSupportedSoftware(Gson gson) {
         try {
             JsonObject supportedSoftware = gson.fromJson(Utils.readFileFromResources("supportedSoftware.json"), JsonObject.class);
-
             if (supportedSoftware == null) {
                 System.err.println("Output of supportedSoftware.json is null, shutting down...");
                 System.exit(0);
             }
-
             return supportedSoftware;
         } catch (Exception e) {
             System.err.println("Error while reading supportedSoftware.json, shutting down...");
             e.printStackTrace();
             System.exit(0);
-            return null; // unreachable, but required
+            return null;
         }
     }
 
@@ -194,7 +200,8 @@ public class Utils {
     }
 
     private static String selectSoftware(Scanner input, JsonObject supportedSoftware, String type) {
-        System.out.println("Please select a " + type +" software you want to use " + supportedSoftware.get(type).getAsJsonArray().toString().replace("\"", ""));
+        System.out.println("Please select a " + type + " software you want to use " +
+                supportedSoftware.get(type).getAsJsonArray().toString().replace("\"", ""));
 
         String result = input.nextLine();
         String finalResult = result.toUpperCase();
@@ -203,7 +210,7 @@ public class Utils {
                 .anyMatch(item -> item.getAsString().equalsIgnoreCase(finalResult));
 
         if (!isValid) {
-            log.warn("{} software {} is unknown.", type, result);
+            System.err.println(type + " software " + result + " is unknown.");
             System.exit(0);
         }
 
@@ -215,18 +222,44 @@ public class Utils {
 
         try {
             JsonObject settings = gson.fromJson(Utils.readFileFromResources("templates/" + software + "/settings.json"), JsonObject.class);
+            JsonObject typeData = gson.fromJson(Utils.readFileFromResources("templates/" + software + "/type.json"), JsonObject.class);
 
             copyTemplateFiles(software, templateName);
             System.out.println("Copied important files, downloading software...");
 
-            downloadSoftware(software, templateName, jarName);
+            String downloadUrl = typeData.get("download_url").getAsString();
+            downloadSoftware(downloadUrl, templateName, jarName);
             System.out.println("Downloaded software successfully.");
 
-            installCloudBridge(software, templateName, settings);
+            String downloadUrlBridge = typeData.get("download_url_bridge").getAsString();
+            installCloudBridge(downloadUrlBridge, templateName, settings);
             System.out.println(templateName + " installed successfully.\n");
 
         } catch (Exception e) {
-            System.err.println("Cannot setup " + templateName + ", shutting down...");
+            System.err.println("Cannot setup " + templateName.toLowerCase() + ", shutting down...");
+            e.printStackTrace();
+            System.exit(0);
+        }
+    }
+
+    public static void updateSoftware(String templateName, String software, String jarName, boolean reboot) {
+        System.out.println("Updating " + templateName + "...");
+        try {
+            JsonObject typeData = new Gson().fromJson(Utils.readFileFromResources("templates/" + software + "/type.json"), JsonObject.class);
+            String downloadUrl = typeData.get("download_url").getAsString();
+
+            FileUtils.copyURLToFile(URI.create(downloadUrl).toURL(),
+                    new File("./templates/" + templateName + "/" + jarName));
+            System.out.println(templateName + " updated successfully.");
+
+            if (reboot) {
+                Template template = RedstoneCloud.getInstance().getServerManager().getTemplate(templateName);
+                Server[] servers = RedstoneCloud.getInstance().getServerManager().getServersByTemplate(template);
+                Arrays.stream(servers).forEach(Server::stop);
+            }
+
+        } catch (IOException e) {
+            System.err.println("Cannot update " + templateName + ", shutting down...");
             e.printStackTrace();
             System.exit(0);
         }
@@ -241,16 +274,14 @@ public class Utils {
                 new File("./templates/" + templateName + "/"));
     }
 
-    private static void downloadSoftware(String software, String templateName, String jarName) throws IOException {
-        String downloadUrl = Utils.readFileFromResources("templates/" + software + "/download_url.txt");
+    private static void downloadSoftware(String downloadUrl, String templateName, String jarName) throws IOException {
         FileUtils.copyURLToFile(URI.create(downloadUrl).toURL(),
                 new File("./templates/" + templateName + "/" + jarName));
     }
 
-    private static void installCloudBridge(String software, String templateName, JsonObject settings) throws IOException {
+    private static void installCloudBridge(String bridgeUrl, String templateName, JsonObject settings) throws IOException {
         System.out.println("Installing CloudBridge on " + templateName + "...");
 
-        String bridgeUrl = Utils.readFileFromResources("templates/" + software + "/download_url_bridge.txt");
         String pluginDir = settings.get("pluginDir").getAsString();
 
         FileUtils.copyURLToFile(URI.create(bridgeUrl).toURL(),
@@ -261,7 +292,6 @@ public class Utils {
 
     private static void copyCloudFiles() {
         System.out.println("Copying cloud setup files...");
-
         try {
             FileUtils.copyURLToFile(Utils.getResourceFile("cloud.json"), new File("./cloud.json"));
             FileUtils.copyURLToFile(Utils.getResourceFile("language.json"), new File("./language.json"));
@@ -274,11 +304,12 @@ public class Utils {
     }
 
     private static void showSummary(RedisConfig redisConfig, boolean setupProxy, boolean setupServer) {
-        System.out.println("");
+        System.out.println();
         System.out.println("Cloud setup completed.");
         System.out.println("====================");
         System.out.println("Built-in redis: " + redisConfig.useBuiltIn);
         System.out.println("Built-in redis port: " + redisConfig.port);
+        System.out.println("Built-in redis db: " + redisConfig.db);
         System.out.println("Updated built-in redis: " + redisConfig.downloadUpdate);
         System.out.println("Setup proxy: " + setupProxy);
         System.out.println("Setup server: " + setupServer);
@@ -290,6 +321,7 @@ public class Utils {
             JsonObject cfgFile = CloudConfig.getCfg();
             cfgFile.addProperty("redis_port", redisConfig.port);
             cfgFile.addProperty("redis_bind", redisConfig.bind);
+            cfgFile.addProperty("redis_db", redisConfig.db);
             cfgFile.addProperty("custom_redis", !redisConfig.useBuiltIn);
 
             Files.writeString(Paths.get(RedstoneCloud.workingDir + "/cloud.json"), cfgFile.toString());
@@ -303,9 +335,8 @@ public class Utils {
     }
 
     private static void waitForUserToStart() {
-        System.out.println("");
+        System.out.println();
         System.out.println("Please press Enter to start the cloud.");
-
         try {
             System.in.read(new byte[2]);
         } catch (IOException e) {
@@ -316,7 +347,6 @@ public class Utils {
 
     public static void createBaseFolders() {
         String[] dirs = {"./servers", "./templates", "./tmp", "./logs", "./plugins", "./template_configs", "./types"};
-
         for (String dir : dirs) {
             File f = new File(dir);
             if (!f.exists()) {

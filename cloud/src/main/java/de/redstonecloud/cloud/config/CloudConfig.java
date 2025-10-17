@@ -30,6 +30,11 @@ public class CloudConfig {
 
     public static RedisEntry getRedis() {
         JsonObject cfg = getCfg();
-        return new RedisEntry(cfg.get("redis_bind").getAsString(), cfg.get("redis_port").getAsString(), !cfg.get("custom_redis").getAsBoolean());
+        return new RedisEntry(
+                cfg.get("redis_bind").getAsString(),
+                cfg.get("redis_port").getAsString(),
+                !cfg.get("custom_redis").getAsBoolean(),
+                !cfg.has("redis_db") ? 0 : cfg.get("redis_db").getAsInt()
+        );
     }
 }

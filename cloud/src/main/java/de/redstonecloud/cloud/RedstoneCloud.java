@@ -56,6 +56,7 @@ public class RedstoneCloud {
 
         System.setProperty(Keys.PROPERTY_REDIS_PORT, redisCfg.port());
         System.setProperty(Keys.PROPERTY_REDIS_IP, redisCfg.ip());
+        System.setProperty(Keys.PROPERTY_REDIS_DB, String.valueOf(redisCfg.db()));
 
         if(redisCfg.useInternal()) {
             redisInstance = new RedisInstance();
@@ -68,7 +69,6 @@ public class RedstoneCloud {
         try {
             log.info(Translator.translate("cloud.startup.redis"));
             broker = new Broker("cloud", BrokerHelper.constructRegistry(), "cloud");
-
             broker.listen("cloud", PacketHandler::handle);
         } catch (Exception e) {
             log.error(System.getenv(Keys.ENV_REDIS_IP) != null ? System.getenv(Keys.ENV_REDIS_IP) : System.getProperty(Keys.PROPERTY_REDIS_IP));
@@ -160,7 +160,7 @@ public class RedstoneCloud {
             log.info(Translator.translate("cloud.shutdown.complete"));
             this.scheduler.stopScheduler();
 
-            broker.getPool().getResource().flushAll();
+            broker.getPool().getResource().flushDB();
             broker.shutdown();
             if(redisInstance != null) redisInstance.shutdown();
         } catch (InterruptedException e) {
