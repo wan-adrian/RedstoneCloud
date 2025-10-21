@@ -389,9 +389,11 @@ public class ServerManager {
         }
 
         return servers.values().stream()
-                .filter(server -> template.equals(server.getTemplate()))
-                .filter(server -> server.getStatus() == ServerStatus.RUNNING)
-                .filter(server -> server.getPlayers().size() < template.getMaxPlayers())
+                .filter(server ->
+                        template.equals(server.getTemplate())
+                         && server.getStatus() == ServerStatus.RUNNING
+                         && server.getPlayers().size() < template.getMaxPlayers()
+                )
                 .map(server -> new BestServerResult(
                         server,
                         template.getMaxPlayers() - server.getPlayers().size()
@@ -412,8 +414,10 @@ public class ServerManager {
         }
 
         return servers.values().stream()
-                .filter(server -> template.equals(server.getTemplate()))
-                .filter(server -> server.getStatus() == ServerStatus.RUNNING)
+                .filter(server ->
+                        template.equals(server.getTemplate())
+                        && server.getStatus() == ServerStatus.RUNNING
+                )
                 .mapToInt(server -> template.getMaxPlayers() - server.getPlayers().size())
                 .sum();
     }
