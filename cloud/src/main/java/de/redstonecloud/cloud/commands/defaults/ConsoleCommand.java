@@ -4,7 +4,7 @@ import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.cloud.server.Server;
-import de.redstonecloud.cloud.server.ServerLogger;
+import de.redstonecloud.cloud.server.reader.ServerOutReader;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -28,7 +28,7 @@ public class ConsoleCommand extends Command {
             return;
         }
 
-        ServerLogger logger = server.getLogger();
+        ServerOutReader logger = server.getLogger();
 
         log.info("Console set to " + server.getName());
         logger.enableConsoleLogging();

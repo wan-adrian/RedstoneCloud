@@ -1,0 +1,195 @@
+# Basic settings for your PowerNukkitX server
+settings:
+  # Server's IP address
+  ip: 0.0.0.0
+  # Server's port
+  port: [port]
+  # Maximum number of players
+  maxPlayers: 20
+  # Default world name
+  defaultLevelName: world
+  # Whether to enable the allowlist
+  allowList: false
+  # Server's MOTD
+  motd: PowerNukkitX Server
+  # Server's sub-MOTD
+  sub-motd: v2.powernukkitx.com
+  # Server's language settings
+  language: eng
+  # Whether the server translates the text when sending or the client translates
+  forceServerTranslate: false
+  # Whether to enable safe spawn
+  safeSpawn: true
+  # Whether to enable WaterdogPE compatibility mode on the server
+  waterdogpe: false
+  # Tick cycle for server auto-save
+  autoSave: true
+  autosaveDelay: 6000
+  # Whether to save unknown blocks, such as custom blocks that are not registered
+  saveUnknownBlock: true
+  # Whether to enable Xbox authentication
+  xboxAuth: false
+# Player specific configuration
+player-settings:
+  # Whether to save player data
+  savePlayerData: true
+  # Cooldown time for players changing skins
+  skinChangeCooldown: 30
+  # Whether to force trust player skins, allowing players to use third-party skins freely
+  forceSkinTrusted: false
+  # Whether to check player movement
+  checkMovement: true
+  # Spawn radius
+  spawnRadius: 16
+# Settings affecting the gameplay on your server
+gameplay-settings:
+  # Whether to allow players to use command blocks
+  enableCommandBlocks: true
+  # Whether to allow beta clients to join
+  allowBeta: false
+  # Whether to enable Redstone functionality
+  enableRedstone: true
+  # Whether to tick Redstone
+  tickRedstone: true
+  # View distance
+  viewDistance: 8
+  # Whether to enable achievements
+  achievements: true
+  # Whether to announce achievements
+  announceAchievements: true
+  # Spawn protection radius
+  spawnProtection: 16
+  # Default game mode
+  gamemode: 0
+  # Whether to force the default game mode
+  forceGamemode: false
+  # Whether to enable hardcore mode
+  hardcore: false
+  # Whether to enable PVP
+  pvp: true
+  # Game difficulty
+  difficulty: 1
+  # Whether to allow the Nether
+  allowNether: true
+  # Whether to allow the End
+  allowTheEnd: true
+  # Whether to force resources
+  forceResources: false
+  # Whether to allow client packs
+  allowClientPacks: false
+  # Whether to enable server authoritative movement
+  serverAuthoritativeMovement: server-auth
+  # pnx.settings.gameplay.allowVibrantVisuals
+  allowVibrantVisuals: true
+  # pnx.settings.gameplay.experiments
+  experiments:
+    - data_driven_biomes
+    - experimental_creator_cameras
+    - gametest
+    - jigsaw_structures
+    - upcoming_creator_features
+    - villager_trades_rebalance
+  # pnx.settings.gameplay.cacheStructures
+  cacheStructures: false
+# Misc settings for your server like add-ons
+misc-settings:
+  # Message sent when the server shuts down
+  shutdownMessage: Server closed
+  # Whether to install the Spark plugin on the server as profiler
+  installSpark: true
+  # Whether to enable Terra as world generator
+  enableTerra: false
+# Settings affecting how levels are handled by PowerNukkitX
+level-settings:
+  # Whether to enable level thread (Every level has its own thread)
+  levelThread: false
+  # Whether the server dynamically adjusts the tick rate
+  autoTickRate: true
+  # Maximum adjustable tick count
+  autoTickRateLimit: 20
+  # Base tick rate
+  baseTickRate: 1
+  # Whether to tick players
+  alwaysTickPlayers: false
+  # Chunk unload tick cycle
+  chunkUnloadDelay: 15000
+  # Limits how many entites can spawn in a world
+  entitySpawnCap: 512
+# Settings affecting how chunks are handled by PowerNukkitX
+chunk-settings:
+  # Limits how many entities can spawn naturally in a chunk.
+  spawnLimit: 3
+  # Maximum number of chunks sent to players per tick
+  perTickSend: 8
+  # Number of chunks a player needs to receive upon first spawn
+  spawnThreshold: 56
+  # Tick cycle of chunks
+  chunksPerTicks: 40
+  # Tick radius of chunks
+  tickRadius: 3
+  # Whether chunks perform light updates
+  lightUpdates: true
+  # Whether to clear the tick list at the end of each tick
+  clearTickList: false
+  # Maximum number of terrain generation tasks executed simultaneously
+  generationQueueSize: 128
+  # Enable this if your BDS imported map have invisble chests, signs, beds, etc.
+  convertBDSChunks: false
+# Network settings for PowerNukkitX
+network-settings:
+  # Whether the query protocol displays plugin information
+  queryPlugins: true
+  # Compression level of the compression algorithm used by the server
+  compressionLevel: 7
+  # Zlib compression algorithm provider used by the server. 0 for Java's original algorithm
+  #  1 for single-threaded low memory usage algorithm
+  #  2 for multi-threaded caching algorithm
+  #  3 for hardware-accelerated algorithm
+  zlibProvider: 3
+  # Whether the server uses Snappy compression (not recommended)
+  snappy: false
+  # Buffer for server decompression
+  compressionBufferSize: 1048576
+  # Maximum number of bytes the server can decompress
+  maxDecompressSize: 67108864
+  # Maximun number of packet per seconds
+  packetLimit: 240
+  # Whether to enable query
+  enableQuery: false
+  # Whether to enable encryption
+  networkEncryption: true
+  # Login time
+  checkLoginTime: false
+  # Whether to enable packet pacing/shaping
+  pacingEnabled: true
+  # Micro-batching delay (milliseconds) between flushes
+  pacingFlushIntervalMillis: 3
+  # Maximum number of bytes per second per connection
+  pacingMaxBytesPerSecond: 8388608
+# Debug configuration for PowerNukkitX
+debug-settings:
+  # Whether to prompt for deprecated events for plugin
+  deprecatedVerbose: true
+  # Server's debug level [INFO, DEBUG, TRACE, ALL]
+  level: INFO
+  # Whether to enable debug commands
+  command: false
+  # Ignored packet logs at TRACE level
+  ignoredPackets: []
+# Performance settings for PowerNukkitX
+performance-settings:
+  # Number of threads used by the server scheduler, 'auto' means automatic allocation
+  asyncWorkers: auto
+  # Whether to enable the freeze array
+  enable: true
+  slots: 32
+  defaultTemperature: 32
+  freezingPoint: 0
+  boilingPoint: 1024
+  absoluteZero: -256
+  melting: 16
+  singleOperation: 1
+  batchOperation: 32
+# Version of your pnx.yml. DO NOT MODIFY!
+config:
+  version: 2.0.0

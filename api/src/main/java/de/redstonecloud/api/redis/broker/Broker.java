@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import de.redstonecloud.api.redis.broker.message.Message;
 import de.redstonecloud.api.redis.broker.packet.Packet;
 import de.redstonecloud.api.redis.broker.packet.PacketRegistry;
+import de.redstonecloud.api.util.Keys;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -68,9 +69,9 @@ public class Broker {
     }
 
     private void initJedis(String... routes) {
-        String address = System.getenv("REDIS_IP") != null ? System.getenv("REDIS_IP") : System.getProperty("redis.bind");
-        int port = Integer.parseInt(System.getenv("REDIS_PORT") != null ? System.getenv("REDIS_PORT") : System.getProperty("redis.port"));
-        int db = Integer.parseInt(System.getenv("REDIS_DB") != null ? System.getenv("REDIS_DB") : System.getProperty("redis.db"));
+        String address = System.getenv(Keys.ENV_REDIS_IP) != null ? System.getenv(Keys.ENV_REDIS_IP) : System.getProperty(Keys.PROPERTY_REDIS_IP);
+        int port = Integer.parseInt(System.getenv(Keys.ENV_REDIS_PORT) != null ? System.getenv(Keys.ENV_REDIS_PORT) : System.getProperty(Keys.PROPERTY_REDIS_PORT));
+        int db = Integer.parseInt(System.getenv(Keys.ENV_REDIS_DB) != null ? System.getenv(Keys.ENV_REDIS_DB) : System.getProperty(Keys.PROPERTY_REDIS_DB));
 
         JedisPoolConfig config = new JedisPoolConfig();
         config.setMinIdle(4);
