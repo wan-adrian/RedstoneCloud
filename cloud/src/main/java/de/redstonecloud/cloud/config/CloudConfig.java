@@ -3,6 +3,7 @@ package de.redstonecloud.cloud.config;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import de.redstonecloud.cloud.RedstoneCloud;
+import de.redstonecloud.cloud.config.entry.RedisEntry;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,5 +26,15 @@ public class CloudConfig {
         }
 
         return cfg;
+    }
+
+    public static RedisEntry getRedis() {
+        JsonObject cfg = getCfg();
+        return new RedisEntry(
+                cfg.get("redis_bind").getAsString(),
+                cfg.get("redis_port").getAsString(),
+                !cfg.get("custom_redis").getAsBoolean(),
+                !cfg.has("redis_db") ? 0 : cfg.get("redis_db").getAsInt()
+        );
     }
 }

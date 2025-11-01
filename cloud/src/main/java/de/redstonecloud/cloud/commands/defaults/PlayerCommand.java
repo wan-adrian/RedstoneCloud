@@ -86,9 +86,35 @@ public class PlayerCommand extends Command {
 
         switch (action) {
             case "info" -> showPlayerInfo(player);
-            case "connect", "kick" -> showNotImplemented();
+            case "connect" -> {
+                if (args.length < 3) {
+                    log.error("Usage: player <name> connect <server>");
+                    return;
+                }
+                String serverName = args[2];
+                connectPlayer(player, serverName);
+            }
+
+            case "kick" -> {
+                if (args.length < 3) {
+                    log.error("Usage: player <name> kick <reason>");
+                    return;
+                }
+                String reason = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
+                kickPlayer(player, reason);
+            }
             default -> showUnknownAction(action);
         }
+    }
+
+    private void connectPlayer(CloudPlayer player, String serverName) {        // Placeholder for actual connect logic
+        log.info("Connecting player " + player.getName() + " to server " + serverName);
+        player.connect(serverName);
+    }
+
+    private void kickPlayer(CloudPlayer player, String reason) {        // Placeholder for actual kick logic
+        log.info("Kicking player " + player.getName() + " for reason: " + reason);
+        player.disconnect(reason);
     }
 
     private void showPlayerInfo(CloudPlayer player) {
