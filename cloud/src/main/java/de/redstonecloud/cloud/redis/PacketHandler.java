@@ -24,6 +24,8 @@ import de.redstonecloud.cloud.server.Template;
 import de.redstonecloud.cloud.utils.Translator;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.UUID;
+
 @Log4j2
 public class PacketHandler {
 
@@ -108,7 +110,7 @@ public class PacketHandler {
                 return;
 
             ServerManager.BestServerResult ss = s[0];
-            String name = ss.server().name;
+            String name = ss.server().getName();
 
             new BestTemplateResultPacket(name)
                     .setTo(packet.getFrom())
@@ -121,7 +123,7 @@ public class PacketHandler {
         Template t = ServerManager.getInstance().getTemplate(packet.getTemplate());
         Server s = ServerManager.getInstance().startServer(t);
 
-        new ServerStartedPacket(s.name)
+        new ServerStartedPacket(s.getName())
                 .setTo(packet.getFrom())
                 .setSessionId(packet.getSessionId())
                 .send();

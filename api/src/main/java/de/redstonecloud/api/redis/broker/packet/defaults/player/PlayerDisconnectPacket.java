@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @Accessors(chain = true)
@@ -16,7 +18,7 @@ import lombok.experimental.Accessors;
 public class PlayerDisconnectPacket extends Packet {
     public static int NETWORK_ID = 6;
 
-    protected String uuid;
+    protected UUID uuid;
     protected String server;
 
     @Override
@@ -26,13 +28,13 @@ public class PlayerDisconnectPacket extends Packet {
 
     @Override
     public void serialize(JsonArray data) {
-        data.add(this.uuid);
+        data.add(this.uuid.toString());
         data.add(this.server);
     }
 
     @Override
     public void deserialize(JsonArray data) {
-        this.uuid = data.get(0).getAsString();
+        this.uuid = UUID.fromString(data.get(0).getAsString());
         this.server = data.get(1).getAsString();
     }
 }

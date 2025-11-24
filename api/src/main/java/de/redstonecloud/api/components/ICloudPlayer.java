@@ -2,6 +2,8 @@ package de.redstonecloud.api.components;
 
 import com.google.common.net.HostAndPort;
 
+import java.util.UUID;
+
 public interface ICloudPlayer extends Nameable {
 
     HostAndPort getAddress();
@@ -10,7 +12,7 @@ public interface ICloudPlayer extends Nameable {
 
     ICloudServer getConnectedServer();
 
-    String getUUID();
+    UUID getUUID();
 
     void sendMessage(String message);
 

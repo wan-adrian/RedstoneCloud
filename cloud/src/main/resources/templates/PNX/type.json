@@ -3,8 +3,9 @@
   "startCommand": ["java", "-Dfile.encoding=UTF-8", "-Djansi.passthrough=true", "-Dterminal.ansi=true", "-XX:+UseZGC", "-XX:+ZGenerational", "-XX:+UseStringDeduplication", "--add-opens", "java.base/java.lang=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED", "-jar", "server.jar"],
   "logsPath": "logs/server.log",
   "portSettingPlaceholder": "[port]",
-  "portSettingFile": "server.properties",
+  "portSettingFile": "pnx.yml",
   "isProxy": false,
+  "stopCommand": "stop",
   "download_url": "https://github.com/PowerNukkitX/PowerNukkitX/releases/download/snapshot/powernukkitx-shaded.jar",
   "download_url_bridge": "https://github.com/RedstoneCloud/CloudBridge/releases/download/snapshot/cloudbridge.jar"
 }

@@ -32,7 +32,7 @@ public class ConsoleCompleter implements Completer {
                     candidates.add(new Candidate(match));
                 }
             } else if (parsedLine.wordIndex() > 0 && !parsedLine.word().isEmpty()) {
-                String command = parsedLine.words().get(0);
+                String command = parsedLine.words().getFirst();
                 Command cmd;
                 if ((cmd = server.getCommandManager().getCommand(command)) != null) {
                     if(parsedLine.words().size() - 2 > cmd.argCount) {
@@ -47,7 +47,7 @@ public class ConsoleCompleter implements Completer {
                     }
                 }
             } else {
-                String command = parsedLine.words().get(0);
+                String command = parsedLine.words().getFirst();
                 Command cmd;
                 if ((cmd = server.getCommandManager().getCommand(command)) != null) {
                     //check if argCount is reached

@@ -29,6 +29,12 @@ public class Template {
 
     private static final long IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+    @Builder.Default
+    private String seperator = "-";
+
+    @Builder.Default
+    private long maxBootTimeMs = 60 * 1000; // 1 minute
+
     public void checkServers() {
         Server[] servers = getServers();
         runningServers = servers.length;
@@ -55,8 +61,8 @@ public class Template {
     }
 
     private boolean isServerIdle(Server server) {
-        boolean hasNoPlayers = server.players.isEmpty();
-        boolean exceedsIdleTime = (System.currentTimeMillis() - server.lastPlayerUpdate) > IDLE_TIMEOUT_MS;
+        boolean hasNoPlayers = server.getPlayers().isEmpty();
+        boolean exceedsIdleTime = (System.currentTimeMillis() - server.getLastPlayerUpdate()) > IDLE_TIMEOUT_MS;
         return hasNoPlayers && exceedsIdleTime;
     }
 
