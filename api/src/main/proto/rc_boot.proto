@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package de.redstonecloud.api;
+
+option java_package = "de.redstonecloud.api";
+option java_outer_classname = "RCBootProto";
+
+service RCBootService {
+  rpc Login(AuthRequest) returns (LoginResponse);
+}
+
+message Template {
+  string name = 1;
+  string data = 2;
+}
+
+message Type {
+  string name = 1;
+  string config = 2;
+}
+
+
+message AuthRequest {
+  string node_id = 1;
+}
+
+message LoginResponse {
+  Status status = 1;
+  string message = 2;
+  string config = 3;
+  string token = 4;
+  repeated Type types = 5;
+  repeated Template templates = 6;
+}
+
+enum Status {
+  SUCCESS = 0;
+  FAILURE = 1;
+}

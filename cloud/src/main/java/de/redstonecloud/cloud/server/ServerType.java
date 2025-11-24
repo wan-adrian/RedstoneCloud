@@ -6,5 +6,6 @@ public record ServerType(String name,
                          String logsPath,
                          String portSettingFile,
                          String portSettingPlaceholder,
-                         String stopCommand) {
+                         String stopCommand,
+                         String raw) {
 }

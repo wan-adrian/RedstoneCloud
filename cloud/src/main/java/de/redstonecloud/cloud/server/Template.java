@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Builder
 @Getter
 public class Template {
@@ -14,6 +16,7 @@ public class Template {
     private int minServers;
     private int maxServers;
     private boolean staticServer;
+    private String raw;
 
     @Builder.Default
     @Setter
@@ -34,6 +37,9 @@ public class Template {
 
     @Builder.Default
     private long maxBootTimeMs = 60 * 1000; // 1 minute
+
+    @Builder.Default
+    private List<String> nodes = List.of();
 
     public void checkServers() {
         Server[] servers = getServers();

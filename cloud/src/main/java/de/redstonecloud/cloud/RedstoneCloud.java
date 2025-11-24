@@ -4,6 +4,7 @@ import de.redstonecloud.api.encryption.KeyManager;
 import de.redstonecloud.api.encryption.cache.KeyCache;
 import de.redstonecloud.api.redis.broker.BrokerHelper;
 import de.redstonecloud.api.util.Keys;
+import de.redstonecloud.cloud.cluster.ClusterManager;
 import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entry.RedisEntry;
 import de.redstonecloud.cloud.events.EventManager;
@@ -27,6 +28,7 @@ import de.redstonecloud.api.redis.cache.Cache;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
+import javax.annotation.Nullable;
 import java.security.PublicKey;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
@@ -42,14 +44,15 @@ public class RedstoneCloud {
     private static RedisInstance redisInstance;
     @Getter
     private static boolean running = false;
-
+    @Getter
+    @Nullable
+    private ClusterManager clusterManager;
 
     @Getter private static Broker broker;
 
     @SneakyThrows
     public static void main(String[] args) {
         workingDir = System.getProperty("user.dir");
-
         if (!Directories.setupCheck.exists()) Utils.setup();
 
         RedisEntry redisCfg = CloudConfig.getRedis();
@@ -137,6 +140,11 @@ public class RedstoneCloud {
         this.scheduler.scheduleRepeatingTask(new CheckTemplateTask(), 3000L);
 
         this.pluginManager.enableAllPlugins();
+
+        if(CloudConfig.hasNodes()) {
+            clusterManager = ClusterManager.getInstance();
+            clusterManager.startServer();
+        }
     }
 
     public void stop() {
@@ -163,6 +171,7 @@ public class RedstoneCloud {
             broker.getPool().getResource().flushDB();
             broker.shutdown();
             if(redisInstance != null) redisInstance.shutdown();
+            if(clusterManager != null) clusterManager.stopServer();
         } catch (InterruptedException e) {
             log.error("Error during shutdown: ", e);
         } catch (Exception e) {

@@ -27,6 +27,7 @@
     <modules>
         <module>api</module>
         <module>cloud</module>
+        <module>node</module>
     </modules>
 
     <properties>

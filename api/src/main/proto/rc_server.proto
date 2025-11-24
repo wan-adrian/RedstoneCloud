@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package de.redstonecloud.api;
+
+option java_package = "de.redstonecloud.api";
+option java_outer_classname = "RCServerProto";
+
+service RCServerService {
+  rpc ServerCommandStream(stream ServerMessage) returns (stream ServerMessage);
+}
+
+message ServerMessage {
+  string token = 1;
+  oneof payload {
+    CommandStartServer startServer = 2;
+    CommandStopServer stopServer = 3;
+    ServerGone serverGone = 4;
+    MasterShutDown masterShutDown = 5;
+    JoinChannel joinChannel = 6;
+  }
+}
+
+message JoinChannel {}
+
+message MasterShutDown {
+
+}
+
+message CommandStartServer {
+  string server_id = 1;
+  string amount = 2;
+  string forcedNumber = 3;
+}
+
+message CommandStopServer {
+  string server_id = 1;
+  bool kill = 2;
+}
+
+message ServerGone {
+  string token = 1;
+  string server_id = 2;
+}

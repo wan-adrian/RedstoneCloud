@@ -7,5 +7,8 @@
     "hub_template": "Lobby",
     "hubcommand_desc": "Go to the Lobby",
     "hubcommand_no_hub_available": "There is no hub avaiable at the moment."
-  }
+  },
+  "cluster_server_bind": "0.0.0.0",
+  "cluster_server_port": 16784,
+  "nodes": []
 }

@@ -100,6 +100,14 @@ public class ServerManager {
                 return;
             }
 
+            List<String> nodes = new ArrayList<>();
+            if (data.has("nodes")) {
+                JsonArray nodesArray = data.getAsJsonArray("nodes");
+                for (int i = 0; i < nodesArray.size(); i++) {
+                    nodes.add(nodesArray.get(i).getAsString());
+                }
+            }
+
             Template template = Template.builder()
                     .name(name)
                     .type(type)
@@ -115,6 +123,8 @@ public class ServerManager {
                             : 60*1000)
                     .stopOnEmpty(data.has("stopOnEmpty") && data.get("stopOnEmpty").getAsBoolean())
                     .seperator(data.has("seperator") ? data.get("seperator").getAsString() : "-")
+                    .raw(data.toString())
+                    .nodes(nodes)
                     .build();
 
             templates.put(name, template);
@@ -169,7 +179,8 @@ public class ServerManager {
                     data.get("logsPath").isJsonNull() ? null : data.get("logsPath").getAsString(),
                     data.get("portSettingFile").getAsString(),
                     data.get("portSettingPlaceholder").getAsString(),
-                    !data.has("stopCommand") ? "stop" : data.get("stopCommand").getAsString()
+                    !data.has("stopCommand") ? "stop" : data.get("stopCommand").getAsString(),
+                    data.toString()
             );
 
             types.put(name, serverType);
@@ -440,6 +451,17 @@ public class ServerManager {
      */
     public Collection<Server> getAllServers() {
         return new ArrayList<>(servers.values());
+    }
+
+    public List<Template> getTemplatesForNode(String nodeId) {
+        List<Template> templates = new ArrayList<>();
+        for (Template template : this.templates.values()) {
+            if (!template.getNodes().isEmpty() && template.getNodes().contains(nodeId)) {
+                templates.add(template);
+            }
+        }
+
+        return templates;
     }
 
     /**
