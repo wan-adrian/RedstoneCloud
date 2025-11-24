@@ -45,11 +45,6 @@ public class BrokerHelper {
             registry.register(RemoveServerPacket.NETWORK_ID, RemoveServerPacket::new);
             registry.register(ServerActionPacket.NETWORK_ID, ServerActionPacket::new);
             registry.register(ServerChangeStatusPacket.NETWORK_ID, ServerChangeStatusPacket::new);
-
-            registry.register(NodeAuthPacket.NETWORK_ID, NodeAuthPacket::new);
-            registry.register(NodeDataSyncPacket.NETWORK_ID, NodeDataSyncPacket::new);
-            registry.register(NodeNotifyPacket.NETWORK_ID, NodeNotifyPacket::new);
-            registry.register(NodeConnectedPacket.NETWORK_ID, NodeConnectedPacket::new);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
