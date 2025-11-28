@@ -37,7 +37,7 @@ jobs:
         run: mkdir -p snapshot
 
       - name: Move build files to snapshot
-        run: mv cloud/target/cloud-0.1-beta-shaded.jar snapshot/redstonecloud.jar
+        run: mv cloud/target/cloud-1.0.0-SNAPSHOT-shaded.jar snapshot/redstonecloud.jar
 
       # Step 5: Set up Git configuration for tagging
       - name: Set up Git for pushing
