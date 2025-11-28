@@ -6,15 +6,25 @@ import com.google.gson.JsonObject;
 import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.RedstoneCloud;
+import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entires.BridgeSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
 import de.redstonecloud.cloud.events.defaults.ServerStartEvent;
+import de.redstonecloud.shared.config.SnakeYamlConfig;
+import de.redstonecloud.shared.files.TemplateConfig;
+import de.redstonecloud.shared.files.TypeConfig;
+import de.redstonecloud.shared.files.template.TemplateBehavior;
+import de.redstonecloud.shared.files.template.TemplateInfo;
+import de.redstonecloud.shared.files.type.TypeDownloads;
+import de.redstonecloud.shared.files.type.TypeInfo;
 import de.redstonecloud.shared.utils.Directories;
 import de.redstonecloud.shared.server.Server;
 import de.redstonecloud.shared.server.ServerType;
 import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.shared.startmethods.StartMethods;
+import de.redstonecloud.shared.utils.SharedUtils;
+import eu.okaeri.configs.ConfigManager;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -35,7 +45,6 @@ import java.util.stream.Collectors;
 @Getter
 @Log4j2
 public class ServerManager {
-
     private static final Gson GSON = new Gson();
     private static final int DEFAULT_SHUTDOWN_TIME_MS = 5000;
     private static final int MIN_PORT = 10000;
@@ -65,7 +74,7 @@ public class ServerManager {
     }
 
     private ServerManager() {
-        log.info("Initializing ServerManager");
+        log.debug("Initializing ServerManager");
         loadServerTypes();
         loadTemplates();
         log.info("ServerManager initialized with {} types and {} templates",
@@ -81,13 +90,13 @@ public class ServerManager {
         try {
             Files.createDirectories(templatesDir);
 
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(templatesDir, "*.json")) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(templatesDir, "*.yml")) {
                 for (Path file : stream) {
                     loadTemplate(file);
                 }
             }
 
-            log.info("Loaded {} templates", templates.size());
+            log.debug("Loaded {} templates", templates.size());
         } catch (IOException e) {
             log.error("Failed to load templates from directory: {}", templatesDir, e);
         }
@@ -95,47 +104,46 @@ public class ServerManager {
 
     private void loadTemplate(Path file) {
         try {
-            String content = Files.readString(file, StandardCharsets.UTF_8);
-            JsonObject data = GSON.fromJson(content, JsonObject.class);
+            TemplateConfig cfg = ConfigManager.create(TemplateConfig.class, it -> {
+                it.withConfigurer(new SnakeYamlConfig());
+                it.withBindFile(file.toFile());
+                it.withRemoveOrphans(true);
+                it.saveDefaults();
+                it.load(true);
+            });
 
-            String name = data.get("name").getAsString();
-            String typeName = data.get("type").getAsString();
-            ServerType type = types.get(typeName);
+            TemplateInfo info = cfg.info();
+            TemplateBehavior behavior = cfg.behavior();
+
+            ServerType type = types.get(info.type());
 
             if (type == null) {
-                log.error("TemplateImpl {} references unknown server type: {}", name, typeName);
+                log.error("Template {} references unknown server type: {}", info.name(), info.type());
                 return;
             }
 
             List<String> nodes = new ArrayList<>();
-            if (data.has("nodes")) {
-                JsonArray nodesArray = data.getAsJsonArray("nodes");
-                for (int i = 0; i < nodesArray.size(); i++) {
-                    nodes.add(nodesArray.get(i).getAsString());
-                }
+            if (!info.node().isEmpty()) {
+                nodes.add(info.node());
             }
 
             TemplateImpl template = TemplateImpl.builder()
-                    .name(name)
+                    .name(info.name())
                     .type(type)
-                    .maxPlayers(data.get("maxPlayers").getAsInt())
-                    .minServers(data.get("minServers").getAsInt())
-                    .maxServers(data.get("maxServers").getAsInt())
-                    .staticServer(data.get("staticServer").getAsBoolean())
-                    .shutdownTimeMs(data.has("shutdownTimeMs")
-                            ? data.get("shutdownTimeMs").getAsInt()
-                            : DEFAULT_SHUTDOWN_TIME_MS)
-                    .maxBootTimeMs(data.has("maxBootTimeMs")
-                            ? data.get("maxBootTimeMs").getAsInt()
-                            : 60 * 1000)
-                    .stopOnEmpty(data.has("stopOnEmpty") && data.get("stopOnEmpty").getAsBoolean())
-                    .seperator(data.has("seperator") ? data.get("seperator").getAsString() : "-")
-                    .raw(data.toString())
+                    .maxPlayers(behavior.maxPlayers())
+                    .minServers(behavior.minServers())
+                    .maxServers(behavior.maxServers())
+                    .staticServer(info.isStatic())
+                    .shutdownTimeMs(behavior.shutdownMillis())
+                    .maxBootTimeMs(behavior.bootMillis())
+                    .stopOnEmpty(behavior.autoStop())
+                    .seperator(info.seperator())
+                    .raw(SharedUtils.convertYamlToJson(Files.readString(file, StandardCharsets.UTF_8)))
                     .nodes(nodes)
                     .build();
 
-            templates.put(name, template);
-            log.debug("Loaded template: {}", name);
+            templates.put(info.name(), template);
+            log.debug("Loaded template: {}", info.name());
 
         } catch (IOException e) {
             log.error("Failed to read template file: {}", file.getFileName(), e);
@@ -149,18 +157,17 @@ public class ServerManager {
      */
     private void loadServerTypes() {
         Path typesDir = Directories.TYPES_DIR.toPath();
-        log.info(typesDir.toUri().toString());
 
         try {
             Files.createDirectories(typesDir);
 
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(typesDir, "*.json")) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(typesDir, "*.yml")) {
                 for (Path file : stream) {
                     loadServerType(file);
                 }
             }
 
-            log.info("Loaded {} server types", types.size());
+            log.debug("Loaded {} server types", types.size());
         } catch (IOException e) {
             log.error("Failed to load server types from directory: {}", typesDir, e);
         }
@@ -168,30 +175,30 @@ public class ServerManager {
 
     private void loadServerType(Path file) {
         try {
-            String content = Files.readString(file, StandardCharsets.UTF_8);
-            JsonObject data = GSON.fromJson(content, JsonObject.class);
+            TypeConfig cfg = ConfigManager.create(TypeConfig.class, it -> {
+                it.withConfigurer(new SnakeYamlConfig());
+                it.withBindFile(file.toFile());
+                it.withRemoveOrphans(true);
+                it.saveDefaults();
+                it.load(true);
+            });
 
-            String name = data.get("name").getAsString();
-            JsonArray startCommandArray = data.getAsJsonArray("startCommand");
-            String[] startCommand = new String[startCommandArray.size()];
-
-            for (int i = 0; i < startCommandArray.size(); i++) {
-                startCommand[i] = startCommandArray.get(i).getAsString();
-            }
+            TypeInfo info = cfg.info();
+            TypeDownloads downloads = cfg.downloads();
 
             ServerType serverType = new ServerType(
-                    name,
-                    startCommand,
-                    data.get("isProxy").getAsBoolean(),
-                    data.get("logsPath").isJsonNull() ? null : data.get("logsPath").getAsString(),
-                    data.get("portSettingFile").getAsString(),
-                    data.get("portSettingPlaceholder").getAsString(),
-                    !data.has("stopCommand") ? "stop" : data.get("stopCommand").getAsString(),
-                    data.toString()
+                    info.name(),
+                    info.startCommand().split(" "),
+                    info.isProxy(),
+                    info.logFile(),
+                    info.portFile(),
+                    info.portPlaceholder(),
+                    info.stopCommand(),
+                    SharedUtils.convertYamlToJson(Files.readString(file, StandardCharsets.UTF_8))
             );
 
-            types.put(name, serverType);
-            log.debug("Loaded server type: {}", name);
+            types.put(info.name(), serverType);
+            log.debug("Loaded server type: {}", info.name());
 
         } catch (IOException e) {
             log.error("Failed to read server type file: {}", file.getFileName(), e);
@@ -306,9 +313,7 @@ public class ServerManager {
                 .selectedMethod(StartMethods.SUBPROCESS).build();
 
         server.initName(id);
-        log.info("name init");
 
-        // Fire creation event
         ServerCreateEvent event = RedstoneCloud.getInstance()
                 .getEventManager()
                 .callEvent(new ServerCreateEvent(server));
@@ -318,7 +323,6 @@ public class ServerManager {
             return null;
         }
 
-        // Prepare and register server
         server.prepare();
         add(server);
         template.setRunningServers(template.getRunningServers() + 1);
