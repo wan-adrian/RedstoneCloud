@@ -39,7 +39,8 @@ public class RCBootServiceImpl extends RCBootServiceGrpc.RCBootServiceImplBase {
 
 
 
-            clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, channel));
+            //TODO: add name
+            clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, null));
         }
 
         List<RCBootProto.Type> types = RedstoneCloud.getInstance().getServerManager().getTypes().clone().values().stream().map(type -> RCBootProto.Type.newBuilder()

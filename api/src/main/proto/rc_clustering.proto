@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package de.redstonecloud.api;
+
+import "rc_generic.proto";
+
+option java_package = "de.redstonecloud.api";
+option java_outer_classname = "RCClusteringProto";
+
+/*
+  A single unified bidirectional RPC used between Node and Master.
+  Both sides may send any envelope at any time.
+*/
+service RCClusteringService {
+  rpc communicate(stream Payload) returns (stream Payload);
+}
+
+/*
+  A generic message wrapper so we can send multiple types over a single stream.
+*/
+message Payload {
+  oneof payload {
+    // Node → Master: registration (required)
+    RegisterNode registerNode = 1;
+
+    // Node → Master: commands
+    PrepareServer prepareServer = 2;
+    StartServer startServer = 3;
+    StopServer stopServer = 4;
+    ExecuteCommand executeCommand = 5;
+
+    // Master → Node: events
+    ServerDied serverDied = 20;
+    ServerStatusChange serverStatusChange = 21;
+
+    // Master → Node: responses to requests
+    GenericResponse response = 30;
+  }
+}
+
+/* ================================================================
+   Node → Master
+   ================================================================ */
+
+message RegisterNode {
+  string nodeId = 1;
+  string token = 2;
+}
+
+message PrepareServer {
+  string token = 1;
+  string template = 2;
+  string name = 3;
+}
+
+message StartServer {
+  string token = 1;
+  string server = 2;
+}
+
+message StopServer {
+  string token = 1;
+  string server = 2;
+  bool kill = 3;
+}
+
+message ExecuteCommand {
+  string token = 1;
+  string server = 2;
+  string command = 3;
+}
+
+/* ================================================================
+   Master → Node
+   ================================================================ */
+
+message ServerDied {
+  string token = 1;
+  string server = 2;
+}
+
+message ServerStatusChange {
+  string token = 1;
+  string server = 2;
+  string status = 3;
+}
