@@ -1,7 +1,10 @@
 package de.redstonecloud.cloud.cluster;
 
+import de.redstonecloud.api.RCNodeProto;
+import de.redstonecloud.api.RCNodeServiceGrpc;
 import de.redstonecloud.cloud.cluster.grpc.RCBootServiceImpl;
-import de.redstonecloud.cloud.cluster.grpc.RCServerServiceImpl;
+import de.redstonecloud.cloud.cluster.grpc.RCMasterServiceImpl;
+import de.redstonecloud.cloud.cluster.grpc.RCNode;
 import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entry.ClusterServerEntry;
 import lombok.Getter;
@@ -35,10 +38,17 @@ public class ClusterManager {
         return INSTANCE;
     }
 
+    public RCNodeServiceGrpc.RCNodeServiceStub getNodeStub(String nodeId) {
+        ClusterNode node = idNodes.get(nodeId);
+        return RCNodeServiceGrpc.newStub(node.getChannel());
+    }
+
     public void addNode(ClusterNode node) {
         nodes.add(node);
         tokenNodes.put(node.getToken(), node);
         idNodes.put(node.getId(), node);
+
+        new RCNode(node.getId()).prepareServer("aa", "aa-2");
     }
 
     public boolean hasNode(String id) {
@@ -54,7 +64,8 @@ public class ClusterManager {
         try {
             server = ServerBuilder.forPort(cfg.port())
                     .addService(new RCBootServiceImpl())
-                    .addService(new RCServerServiceImpl())
+                    .addService(new RCMasterServiceImpl())
+                    //.intercept(new TokenCheck("TOKEN HERE"))
                     .build()
                     .start();
 
@@ -66,8 +77,7 @@ public class ClusterManager {
     }
 
     public void stopServer() {
-        //send message to all connected nodes
-        new RCServerServiceImpl().sendMasterShutdown();
+        //TODO: send message to all connected nodes
 
         if (server != null && !server.isShutdown()) {
             server.shutdown();

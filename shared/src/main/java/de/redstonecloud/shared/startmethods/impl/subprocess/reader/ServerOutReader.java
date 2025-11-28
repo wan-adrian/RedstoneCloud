@@ -1,8 +1,6 @@
-package de.redstonecloud.cloud.server.reader;
+package de.redstonecloud.shared.startmethods.impl.subprocess.reader;
 
-import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.scheduler.task.TaskHandler;
-import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.shared.startmethods.impl.subprocess.Subprocess;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -13,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -28,7 +28,7 @@ public class ServerOutReader extends Thread {
     private static final String BUFFER_LOG_FILENAME = "buffer_console.log";
 
     @Getter
-    private final Server server;
+    private final Subprocess process;
 
     @lombok.Builder.Default
     private final AtomicBoolean running = new AtomicBoolean(true);
@@ -42,7 +42,7 @@ public class ServerOutReader extends Thread {
     private volatile File logFile;
     private volatile BufferedWriter writer;
     private volatile ServerErrorReader errorReader;
-    private volatile TaskHandler<?> writerTask;
+    private volatile Timer writerTask;
 
     @Override
     public void run() {
@@ -53,23 +53,22 @@ public class ServerOutReader extends Thread {
             schedulePeriodicFlush();
             readServerOutput();
         } catch (Exception e) {
-            log.error("Error in ServerOutReader for server {}", server.getName(), e);
+            log.error("Error in ServerOutReader", e);
         } finally {
             cleanupResources();
         }
     }
 
     private void initializeLogFile() {
-        logFile = new File(server.getDirectory(), BUFFER_LOG_FILENAME);
+        logFile = new File(process.getDirectory(), BUFFER_LOG_FILENAME);
         try {
             Path logPath = logFile.toPath();
             if (!Files.exists(logPath)) {
                 Files.createDirectories(logPath.getParent());
                 Files.createFile(logPath);
             }
-            log.debug("Log file initialized for server {}: {}", server.getName(), logFile.getAbsolutePath());
         } catch (IOException e) {
-            log.error("Failed to create log file for server {}", server.getName(), e);
+            log.error("Failed to create log file", e);
         }
     }
 
@@ -89,16 +88,21 @@ public class ServerOutReader extends Thread {
                     )
             );
             lastMessages.clear();
-            log.debug("Writer initialized for server {}", server.getName());
         } catch (IOException e) {
-            log.error("Failed to initialize writer for server {}", server.getName(), e);
+            log.error("Failed to initialize writer", e);
         }
     }
 
     private void schedulePeriodicFlush() {
-        writerTask = RedstoneCloud.getInstance().getScheduler().scheduleRepeatingTask(() -> {
-            flushWriter();
-        }, WRITER_FLUSH_INTERVAL_MS);
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                flushWriter();
+            }
+        };
+
+        writerTask = new java.util.Timer(true);
+        writerTask.scheduleAtFixedRate(task, WRITER_FLUSH_INTERVAL_MS, WRITER_FLUSH_INTERVAL_MS);
     }
 
     private void flushWriter() {
@@ -106,15 +110,15 @@ public class ServerOutReader extends Thread {
             try {
                 writer.flush();
             } catch (IOException e) {
-                log.warn("Failed to flush writer for server {}", server.getName(), e);
+                log.warn("Failed to flush writer", e);
             }
         }
     }
 
     private void readServerOutput() {
-        Process process = server.getProcess();
+        Process process = getProcess().getProcess();
         if (process == null) {
-            log.warn("Cannot read output: process is null for server {}", server.getName());
+            log.warn("Cannot read output: process is null");
             return;
         }
 
@@ -127,7 +131,7 @@ public class ServerOutReader extends Thread {
             }
         } catch (IOException e) {
             if (running.get()) {
-                log.debug("Stream closed for server {}", server.getName());
+                log.debug("Stream closed");
             }
         }
     }
@@ -135,11 +139,6 @@ public class ServerOutReader extends Thread {
     private void processOutputLine(String line) {
         if (line == null || line.isEmpty()) {
             return;
-        }
-
-        // Log to console if enabled
-        if (logToConsole.get()) {
-            log.info("[{}] {}", server.getName(), line);
         }
 
         // Write to file
@@ -155,7 +154,7 @@ public class ServerOutReader extends Thread {
                 writer.write(line);
                 writer.newLine();
             } catch (IOException e) {
-                log.debug("Failed to write line to file for server {}", server.getName());
+                log.debug("Failed to write line to file");
             }
         }
     }
@@ -173,12 +172,7 @@ public class ServerOutReader extends Thread {
 
         closeWriter();
 
-        if (logToConsole.get()) {
-            RedstoneCloud.getInstance().setCurrentLogServer(null);
-        }
-
-        server.setLogger(null);
-        log.debug("ServerOutReader cleaned up for server {}", server.getName());
+        process.setLogger(null);
     }
 
     private void closeWriter() {
@@ -187,7 +181,7 @@ public class ServerOutReader extends Thread {
                 writer.flush();
                 writer.close();
             } catch (IOException e) {
-                log.error("Failed to close writer for server {}", server.getName());
+                log.error("Failed to close writer");
             }
         }
     }
@@ -202,59 +196,6 @@ public class ServerOutReader extends Thread {
 
         cleanupResources();
         this.interrupt();
-    }
-
-    /**
-     * Enables console logging and outputs all previously buffered content.
-     */
-    public void enableConsoleLogging() {
-        if (logToConsole.getAndSet(true)) {
-            return; // Already enabled
-        }
-
-        outputBufferedContent();
-    }
-
-    private void outputBufferedContent() {
-        Set<String> outputLines = new LinkedHashSet<>();
-
-        // Read from file first
-        if (logFile != null && logFile.exists()) {
-            try (BufferedReader reader = new BufferedReader(
-                    new FileReader(logFile, StandardCharsets.UTF_8))) {
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    log.info("[{}] {}", server.getName(), line);
-                    outputLines.add(line);
-                }
-            } catch (IOException e) {
-                log.error("Failed to read buffered log for server {}", server.getName(), e);
-            }
-        }
-
-        // Output any messages not yet in the file
-        for (String msg : lastMessages) {
-            if (!outputLines.contains(msg)) {
-                log.info("[{}] {}", server.getName(), msg);
-            }
-        }
-    }
-
-    /**
-     * Disables console logging.
-     */
-    public void disableConsoleLogging() {
-        logToConsole.set(false);
-    }
-
-    /**
-     * Checks if console logging is enabled.
-     *
-     * @return true if console logging is enabled
-     */
-    public boolean isConsoleLogging() {
-        return logToConsole.get();
     }
 
     /**

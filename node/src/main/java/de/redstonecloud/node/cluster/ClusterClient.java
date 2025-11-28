@@ -2,9 +2,8 @@ package de.redstonecloud.node.cluster;
 
 import de.redstonecloud.api.RCBootProto;
 import de.redstonecloud.api.RCBootProto.Status;
-import de.redstonecloud.api.RCServerProto.*;
 import de.redstonecloud.api.RCBootServiceGrpc;
-import de.redstonecloud.api.RCServerServiceGrpc;
+import de.redstonecloud.node.cluster.grpc.RCMaster;
 import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.config.entry.MasterEntry;
 import io.grpc.ConnectivityState;
@@ -19,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 @Log4j2
 @Getter
 public class ClusterClient {
-
+    private static ClusterClient INSTANCE;
     private volatile String token;
     private final MasterEntry masterEntry;
     private ManagedChannel channel;
@@ -27,10 +26,16 @@ public class ClusterClient {
     private volatile boolean running = true;
     private volatile boolean loggedIn = false;
 
-    private StreamObserver<ServerMessage> outgoing; // send events to master
+    public static ClusterClient getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new ClusterClient();
+        }
+        return INSTANCE;
+    }
 
-    public ClusterClient() {
+    private ClusterClient() {
         this.masterEntry = NodeConfig.getMasterSettings();
+        NodeServer.getInstance();
     }
 
     public void start() {
@@ -53,7 +58,7 @@ public class ClusterClient {
 
             doLogin();
 
-            openCommandStream();
+            RCMaster.serverDied("test");
 
         } catch (Exception e) {
             log.error("Connection to master failed: {}", e.getMessage());
@@ -68,6 +73,8 @@ public class ClusterClient {
 
             RCBootProto.AuthRequest req = RCBootProto.AuthRequest.newBuilder()
                     .setNodeId(NodeConfig.getNodeId())
+                    .setHostname(NodeConfig.getHost())
+                    .setPort(NodeServer.getInstance().getPort())
                     .build();
 
             RCBootProto.LoginResponse res = stub.login(req);
@@ -84,65 +91,6 @@ public class ClusterClient {
         } catch (Exception e) {
             log.error("Login error: {}", e.getMessage());
             loggedIn = false;
-        }
-    }
-
-    /**
-     * Opens bidirectional command/event stream to master
-     */
-    private void openCommandStream() {
-        RCServerServiceGrpc.RCServerServiceStub stub =
-                RCServerServiceGrpc.newStub(channel);
-
-        // Incoming messages from master
-        StreamObserver<ServerMessage> incoming = new StreamObserver<>() {
-            @Override
-            public void onNext(ServerMessage msg) {
-                handleServerMessage(msg);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                log.error("Command stream error: {}", t.getMessage());
-                // Auto-reconnect handled in connectionMonitorLoop
-            }
-
-            @Override
-            public void onCompleted() {
-                log.warn("Master closed the command stream");
-            }
-        };
-
-        // Open bidirectional stream
-        outgoing = stub.serverCommandStream(incoming);
-        log.info("Command stream opened to master");
-
-        sendEvent(ServerMessage.newBuilder().setToken(token).setJoinChannel(JoinChannel.newBuilder().build()).build());
-    }
-
-    private void handleServerMessage(ServerMessage msg) {
-        System.out.println("Received message from master: " + msg.toString());
-        if (msg.hasMasterShutDown()) {
-            log.warn("Master is shutting down, stopping node...");
-            //TODO: Stop node
-            channel.shutdown();
-            System.exit(0);
-            return;
-        }
-
-        //TODO: Implement more
-    }
-
-    /**
-     * Send event to master (e.g., ServerGone)
-     */
-    public void sendEvent(ServerMessage msg) {
-        if (outgoing != null) {
-            try {
-                outgoing.onNext(msg);
-            } catch (Exception e) {
-                log.warn("Failed to send event to master: {}", e.getMessage());
-            }
         }
     }
 

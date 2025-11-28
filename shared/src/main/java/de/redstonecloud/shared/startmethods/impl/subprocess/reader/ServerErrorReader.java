@@ -1,4 +1,4 @@
-package de.redstonecloud.cloud.server.reader;
+package de.redstonecloud.shared.startmethods.impl.subprocess.reader;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -27,16 +27,14 @@ public class ServerErrorReader extends Thread {
         try {
             readServerErrors();
         } catch (Exception e) {
-            log.error("Error in ServerErrorReader for server {}",
-                    logger.getServer().getName(), e);
+            log.error("Error in ServerErrorReader", e);
         }
     }
 
     private void readServerErrors() {
-        Process process = logger.getServer().getProcess();
+        Process process = logger.getProcess().getProcess();
         if (process == null) {
-            log.warn("Cannot read errors: process is null for server {}",
-                    logger.getServer().getName());
+            log.warn("Cannot read errors: process is null");
             return;
         }
 
@@ -49,8 +47,7 @@ public class ServerErrorReader extends Thread {
             }
         } catch (IOException e) {
             if (running.get()) {
-                log.debug("Error stream closed for server {}",
-                        logger.getServer().getName());
+                log.debug("Error stream closed");
             }
         }
     }
@@ -58,11 +55,6 @@ public class ServerErrorReader extends Thread {
     private void processErrorLine(String line) {
         if (line == null || line.isEmpty()) {
             return;
-        }
-
-        // Log to console if enabled
-        if (logger.isConsoleLogging()) {
-            log.error("[{}] {}", logger.getServer().getName(), line);
         }
 
         // Write to the same file as stdout
@@ -79,8 +71,7 @@ public class ServerErrorReader extends Thread {
                 writer.write("[ERROR] " + line);
                 writer.newLine();
             } catch (IOException e) {
-                log.debug("Failed to write error line to file for server {}",
-                        logger.getServer().getName());
+                log.debug("Failed to write error line to file");
             }
         }
     }
@@ -94,7 +85,6 @@ public class ServerErrorReader extends Thread {
         }
 
         this.interrupt();
-        log.debug("ServerErrorReader cancelled for server {}",
-                logger.getServer().getName());
+        log.debug("ServerErrorReader cancelled");
     }
 }

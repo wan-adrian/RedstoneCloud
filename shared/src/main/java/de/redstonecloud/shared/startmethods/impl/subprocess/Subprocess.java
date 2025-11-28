@@ -1,0 +1,122 @@
+package de.redstonecloud.shared.startmethods.impl.subprocess;
+
+import de.redstonecloud.shared.startmethods.IStartMethod;
+import de.redstonecloud.shared.startmethods.impl.subprocess.reader.ServerOutReader;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+
+@Log4j2
+@Getter
+public class Subprocess implements IStartMethod {
+    private volatile ProcessBuilder processBuilder;
+    private Process process;
+    @Setter
+    private ServerOutReader logger;
+    public String directory = "";
+    public int port = -1;
+    private Runnable onExit;
+
+    @Override
+    public void setOnExit(Runnable onExit) {
+        this.onExit = onExit;
+    }
+
+    @Override
+    public void setDirectory(String directory) {
+        this.directory = directory;
+    }
+
+    @Override
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    @Override
+    public void start() {
+        try {
+            logger = ServerOutReader.builder().process(this).build();
+            process = processBuilder.start();
+            process.onExit().thenRun(() -> {
+                if (onExit != null) {
+                    onExit.run();
+                }
+            });
+        } catch (IOException e) {
+            log.info("Could not start new subprocess: ", e);
+        }
+    }
+
+    @Override
+    public void prepare(String sourceDir, String[] command, Map<String, String> env) {
+        processBuilder = new ProcessBuilder(command)
+                .directory(new File(directory));
+
+        processBuilder.environment().putAll(env);
+
+        createServerDirectory();
+        if (!Files.exists(Path.of(sourceDir))) {
+            log.error("Template directory not found: " + sourceDir);
+            return;
+        }
+
+        try {
+            FileUtils.copyDirectory(new File(sourceDir), new File(directory));
+        } catch (IOException e) {
+            log.error("Cannot copy template", e);
+            log.error("Source: " + sourceDir + " | Destination: " + directory);
+        }
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    @Override
+    public void cleanup() {
+
+    }
+
+    @Override
+    public String getDirectory() {
+        return "";
+    }
+
+    @Override
+    public void writeCommand(String command) {
+        try (PrintWriter stdin = new PrintWriter(
+                new BufferedWriter(
+                        new OutputStreamWriter(process.getOutputStream())), true)) {
+            stdin.println(command);
+        } catch (Exception e) {
+            log.error("Failed to write console command", e);
+        }
+    }
+
+    @Override
+    public boolean isActive() {
+        return process != null && process.isAlive();
+    }
+
+    private void createServerDirectory() {
+        try {
+            Files.createDirectories(Path.of(directory));
+        } catch (IOException e) {
+            log.error("Cannot create dir: ", directory);
+        }
+    }
+
+    @Override
+    public void kill() {
+        this.stop();
+
+        //TODO: kill after 5 seconds if not already stopped
+    }
+}

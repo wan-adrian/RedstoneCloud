@@ -4,10 +4,17 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import de.redstonecloud.api.components.ServerStatus;
+import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.RedstoneCloud;
+import de.redstonecloud.cloud.config.CloudConfig;
+import de.redstonecloud.cloud.config.entry.RedisEntry;
 import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
 import de.redstonecloud.cloud.events.defaults.ServerStartEvent;
-import de.redstonecloud.cloud.utils.Directories;
+import de.redstonecloud.shared.utils.Directories;
+import de.redstonecloud.shared.server.Server;
+import de.redstonecloud.shared.server.ServerType;
+import de.redstonecloud.shared.server.Template;
+import de.redstonecloud.shared.startmethods.StartMethods;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -37,7 +44,7 @@ public class ServerManager {
     private static volatile ServerManager INSTANCE;
 
     private final Object2ObjectOpenHashMap<String, ServerType> types = new Object2ObjectOpenHashMap<>();
-    private final Object2ObjectOpenHashMap<String, Template> templates = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<String, TemplateImpl> templates = new Object2ObjectOpenHashMap<>();
     private final ConcurrentHashMap<String, Server> servers = new ConcurrentHashMap<>();
 
     /**
@@ -96,7 +103,7 @@ public class ServerManager {
             ServerType type = types.get(typeName);
 
             if (type == null) {
-                log.error("Template {} references unknown server type: {}", name, typeName);
+                log.error("TemplateImpl {} references unknown server type: {}", name, typeName);
                 return;
             }
 
@@ -108,7 +115,7 @@ public class ServerManager {
                 }
             }
 
-            Template template = Template.builder()
+            TemplateImpl template = TemplateImpl.builder()
                     .name(name)
                     .type(type)
                     .maxPlayers(data.get("maxPlayers").getAsInt())
@@ -120,7 +127,7 @@ public class ServerManager {
                             : DEFAULT_SHUTDOWN_TIME_MS)
                     .maxBootTimeMs(data.has("maxBootTimeMs")
                             ? data.get("maxBootTimeMs").getAsInt()
-                            : 60*1000)
+                            : 60 * 1000)
                     .stopOnEmpty(data.has("stopOnEmpty") && data.get("stopOnEmpty").getAsBoolean())
                     .seperator(data.has("seperator") ? data.get("seperator").getAsString() : "-")
                     .raw(data.toString())
@@ -242,7 +249,7 @@ public class ServerManager {
      * @param name the template name
      * @return the template, or null if not found
      */
-    public Template getTemplate(String name) {
+    public TemplateImpl getTemplate(String name) {
         if (name == null || name.isEmpty()) {
             return null;
         }
@@ -263,7 +270,7 @@ public class ServerManager {
      * Starts a new server with specified or auto-generated ID.
      *
      * @param template the template to use
-     * @param id the server ID, or null for auto-generation
+     * @param id       the server ID, or null for auto-generation
      * @return the created server, or null if cancelled
      */
     public Server startServer(Template template, Integer id) {
@@ -272,18 +279,27 @@ public class ServerManager {
             return null;
         }
 
-        log.info("Creating server from template: {}", template.getName());
+        String node = template.getNodes() != null && !template.getNodes().isEmpty() ? template.getNodes().getFirst() : "";
 
-        // Build server instance
-        Server server = Server.builder()
+        RedisEntry redisCfg = CloudConfig.getRedis();
+
+        ServerImpl server = ServerImpl.builder()
                 .template(template)
                 .uuid(UUID.randomUUID())
                 .createdAt(System.currentTimeMillis())
                 .type(template.getType())
                 .port(generateRandomPort())
-                .build();
+                .nodeId(node)
+                .env(Map.of(
+                        Keys.ENV_REDIS_IP, redisCfg.ip(),
+                        Keys.ENV_REDIS_PORT, redisCfg.port(),
+                        Keys.ENV_REDIS_DB, String.valueOf(redisCfg.db()),
+                        "BRIDGE_CFG", CloudConfig.getCfg().get("bridge").getAsJsonObject().toString()
+                ))
+                .selectedMethod(StartMethods.SUBPROCESS).build();
 
         server.initName(id);
+        log.info("name init");
 
         // Fire creation event
         ServerCreateEvent event = RedstoneCloud.getInstance()
@@ -361,7 +377,7 @@ public class ServerManager {
      * @param template the template to filter by
      * @return array of matching servers
      */
-    public Server[] getServersByTemplate(Template template) {
+    public Server[] getServersByTemplate(TemplateImpl template) {
         if (template == null) {
             return new Server[0];
         }
@@ -394,7 +410,7 @@ public class ServerManager {
      * @param template the template to search for
      * @return array of best server results sorted by free slots
      */
-    public BestServerResult[] getBestServer(Template template) {
+    public BestServerResult[] getBestServer(TemplateImpl template) {
         if (template == null) {
             return new BestServerResult[0];
         }
@@ -402,8 +418,8 @@ public class ServerManager {
         return servers.values().stream()
                 .filter(server ->
                         template.equals(server.getTemplate())
-                         && server.getStatus() == ServerStatus.RUNNING
-                         && server.getPlayers().size() < template.getMaxPlayers()
+                                && server.getStatus() == ServerStatus.RUNNING
+                                && server.getPlayers().size() < template.getMaxPlayers()
                 )
                 .map(server -> new BestServerResult(
                         server,
@@ -419,7 +435,7 @@ public class ServerManager {
      * @param template the template to calculate for
      * @return total number of free slots
      */
-    public int getTemplateFreeSlots(Template template) {
+    public int getTemplateFreeSlots(TemplateImpl template) {
         if (template == null) {
             return 0;
         }
@@ -427,7 +443,7 @@ public class ServerManager {
         return servers.values().stream()
                 .filter(server ->
                         template.equals(server.getTemplate())
-                        && server.getStatus() == ServerStatus.RUNNING
+                                && server.getStatus() == ServerStatus.RUNNING
                 )
                 .mapToInt(server -> template.getMaxPlayers() - server.getPlayers().size())
                 .sum();
@@ -455,7 +471,7 @@ public class ServerManager {
 
     public List<Template> getTemplatesForNode(String nodeId) {
         List<Template> templates = new ArrayList<>();
-        for (Template template : this.templates.values()) {
+        for (TemplateImpl template : this.templates.values()) {
             if (!template.getNodes().isEmpty() && template.getNodes().contains(nodeId)) {
                 templates.add(template);
             }
@@ -467,7 +483,7 @@ public class ServerManager {
     /**
      * Result of finding the best server for load balancing.
      *
-     * @param server the server instance
+     * @param server    the server instance
      * @param freeSlots number of available player slots
      */
     public record BestServerResult(Server server, int freeSlots) {

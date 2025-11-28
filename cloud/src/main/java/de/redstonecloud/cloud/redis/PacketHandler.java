@@ -18,13 +18,12 @@ import de.redstonecloud.cloud.events.defaults.PlayerTransferEvent;
 import de.redstonecloud.cloud.events.defaults.ServerReadyEvent;
 import de.redstonecloud.cloud.player.CloudPlayer;
 import de.redstonecloud.cloud.player.PlayerManager;
-import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.cloud.server.TemplateImpl;
+import de.redstonecloud.shared.server.Server;
 import de.redstonecloud.cloud.server.ServerManager;
-import de.redstonecloud.cloud.server.Template;
+import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.cloud.utils.Translator;
 import lombok.extern.log4j.Log4j2;
-
-import java.util.UUID;
 
 @Log4j2
 public class PacketHandler {
@@ -103,7 +102,7 @@ public class PacketHandler {
     }
 
     private static void on(GetBestTemplatePacket packet) {
-        Template template = ServerManager.getInstance().getTemplate(packet.getTemplate());
+        TemplateImpl template = ServerManager.getInstance().getTemplate(packet.getTemplate());
         if (template != null) {
             ServerManager.BestServerResult[] s = ServerManager.getInstance().getBestServer(template);
             if (s.length == 0)

@@ -4,8 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.config.CloudConfig;
-import de.redstonecloud.cloud.server.Server;
-import de.redstonecloud.cloud.server.Template;
+import de.redstonecloud.cloud.server.TemplateImpl;
+import de.redstonecloud.shared.server.Server;
+import de.redstonecloud.shared.server.Template;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -253,7 +254,7 @@ public class Utils {
             System.out.println(templateName + " updated successfully.");
 
             if (reboot) {
-                Template template = RedstoneCloud.getInstance().getServerManager().getTemplate(templateName);
+                TemplateImpl template = RedstoneCloud.getInstance().getServerManager().getTemplate(templateName);
                 Server[] servers = RedstoneCloud.getInstance().getServerManager().getServersByTemplate(template);
                 Arrays.stream(servers).forEach(Server::stop);
             }

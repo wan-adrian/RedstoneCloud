@@ -5,6 +5,8 @@ import de.redstonecloud.api.RCBootServiceGrpc;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.ClusterManager;
 import de.redstonecloud.cloud.cluster.ClusterNode;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.log4j.Log4j2;
 
@@ -27,7 +29,17 @@ public class RCBootServiceImpl extends RCBootServiceGrpc.RCBootServiceImplBase {
         } else {
             log.info("Node {} connected", request.getNodeId());
             token = "session-" + request.getNodeId() + "-" + System.currentTimeMillis();
-            clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token));
+
+            //connect to node
+            ManagedChannel channel = ManagedChannelBuilder
+                    .forAddress(request.getHostname(), request.getPort())
+                    .usePlaintext()
+                    .intercept(new TokenInject(token))
+                    .build();
+
+
+
+            clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, channel));
         }
 
         List<RCBootProto.Type> types = RedstoneCloud.getInstance().getServerManager().getTypes().clone().values().stream().map(type -> RCBootProto.Type.newBuilder()

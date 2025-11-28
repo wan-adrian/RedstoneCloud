@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package de.redstonecloud.api;
+
+import "rc_generic.proto";
+
+option java_package = "de.redstonecloud.api";
+option java_outer_classname = "RCMasterProto";
+
+service RCMasterService {
+  rpc serverDied(ServerDied) returns (Empty);
+  rpc serverStatusChange(ServerStatusChange) returns (Empty);
+}
+
+message ServerDied {
+  string token = 1;
+  string server = 2;
+}
+
+message ServerStatusChange {
+  string token = 1;
+  string server = 2;
+  string status = 3;
+}

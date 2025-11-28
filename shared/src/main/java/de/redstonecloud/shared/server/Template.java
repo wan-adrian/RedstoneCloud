@@ -1,15 +1,16 @@
-package de.redstonecloud.cloud.server;
+package de.redstonecloud.shared.server;
 
 import de.redstonecloud.api.components.ServerStatus;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
-@Builder
+@SuperBuilder
 @Getter
-public class Template {
+public abstract class Template {
     private String name;
     private ServerType type;
     private int maxPlayers;
@@ -52,9 +53,7 @@ public class Template {
         }
     }
 
-    private Server[] getServers() {
-        return ServerManager.getInstance().getServersByTemplate(this);
-    }
+    protected abstract Server[] getServers();
 
     private void handleIdleServers(Server[] servers) {
         if (!stopOnEmpty) return;
@@ -107,7 +106,5 @@ public class Template {
         return runningServers <= maxServers;
     }
 
-    private void createNewServer() {
-        ServerManager.getInstance().startServer(this);
-    }
+    protected abstract void createNewServer();
 }

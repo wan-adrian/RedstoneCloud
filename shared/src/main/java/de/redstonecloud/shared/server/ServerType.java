@@ -1,4 +1,4 @@
-package de.redstonecloud.cloud.server;
+package de.redstonecloud.shared.server;
 
 public record ServerType(String name,
                          String[] startCommand,

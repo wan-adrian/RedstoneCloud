@@ -12,17 +12,15 @@ import de.redstonecloud.cloud.player.PlayerManager;
 import de.redstonecloud.cloud.plugin.PluginManager;
 import de.redstonecloud.cloud.redis.PacketHandler;
 import de.redstonecloud.cloud.redis.RedisInstance;
-import de.redstonecloud.cloud.server.reader.ServerOutReader;
 import de.redstonecloud.cloud.commands.CommandManager;
 import de.redstonecloud.cloud.console.Console;
 import de.redstonecloud.cloud.scheduler.TaskScheduler;
 import de.redstonecloud.cloud.scheduler.defaults.CheckTemplateTask;
 import de.redstonecloud.cloud.server.ServerManager;
-import de.redstonecloud.cloud.utils.Directories;
+import de.redstonecloud.shared.utils.Directories;
 import de.redstonecloud.cloud.utils.Translator;
 import de.redstonecloud.cloud.utils.Utils;
 import lombok.Getter;
-import lombok.Setter;
 import de.redstonecloud.api.redis.broker.Broker;
 import de.redstonecloud.api.redis.cache.Cache;
 import lombok.SneakyThrows;
@@ -91,8 +89,6 @@ public class RedstoneCloud {
     }
 
     private ConsoleThread consoleThread;
-    @Setter
-    protected ServerOutReader currentLogServer = null;
     protected PlayerManager playerManager;
     protected ServerManager serverManager;
     protected CommandManager commandManager;
@@ -165,11 +161,12 @@ public class RedstoneCloud {
             this.pluginManager.disableAllPlugins();
             log.info(Translator.translate("cloud.shutdown.plugins"));
             this.eventManager.getThreadedExecutor().shutdown();
+            broker.getPool().getResource().flushDB();
+            broker.shutdown();
+
             log.info(Translator.translate("cloud.shutdown.complete"));
             this.scheduler.stopScheduler();
 
-            broker.getPool().getResource().flushDB();
-            broker.shutdown();
             if(redisInstance != null) redisInstance.shutdown();
             if(clusterManager != null) clusterManager.stopServer();
         } catch (InterruptedException e) {

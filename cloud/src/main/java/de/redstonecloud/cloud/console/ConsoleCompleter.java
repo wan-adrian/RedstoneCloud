@@ -16,7 +16,7 @@ public class ConsoleCompleter implements Completer {
 
     @Override
     public void complete(LineReader lineReader, ParsedLine parsedLine, List<Candidate> candidates) {
-        if(server.getCurrentLogServer() == null) {
+        //if(server.getCurrentLogServer() == null) {
             if (parsedLine.wordIndex() == 0) {
                 if (parsedLine.word().isEmpty()) {
                     addCandidates(s -> candidates.add(new Candidate(s)));
@@ -60,13 +60,13 @@ public class ConsoleCompleter implements Completer {
                     }
                 }
             }
-        } else {
+        /*} else {
             if (parsedLine.wordIndex() == 0) {
                 if (parsedLine.word().isEmpty()) {
                     candidates.add(new Candidate("_exit"));
                 }
             }
-        }
+        }*/
     }
 
     private void addCandidates(Consumer<String> commandConsumer) {

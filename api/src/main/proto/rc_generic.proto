@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package de.redstonecloud.api;
+
+option java_package = "de.redstonecloud.api";
+option java_outer_classname = "RCGenericProto";
+
+message GenericResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message Empty {}

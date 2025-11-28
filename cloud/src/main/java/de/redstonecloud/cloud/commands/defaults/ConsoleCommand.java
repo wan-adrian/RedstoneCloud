@@ -3,8 +3,7 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.server.Server;
-import de.redstonecloud.cloud.server.reader.ServerOutReader;
+import de.redstonecloud.shared.server.Server;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -28,11 +27,7 @@ public class ConsoleCommand extends Command {
             return;
         }
 
-        ServerOutReader logger = server.getLogger();
-
-        log.info("Console set to " + server.getName());
-        logger.enableConsoleLogging();
-        RedstoneCloud.getInstance().setCurrentLogServer(logger);
+        log.info("Temporarily not available.");
     }
 
     @Override

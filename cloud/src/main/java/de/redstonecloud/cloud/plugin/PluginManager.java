@@ -2,7 +2,7 @@ package de.redstonecloud.cloud.plugin;
 
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.server.ServerManager;
-import de.redstonecloud.cloud.server.ServerType;
+import de.redstonecloud.shared.server.ServerType;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;

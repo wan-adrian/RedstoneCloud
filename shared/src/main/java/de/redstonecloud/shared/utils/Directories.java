@@ -1,4 +1,4 @@
-package de.redstonecloud.cloud.utils;
+package de.redstonecloud.shared.utils;
 
 import java.io.File;
 

@@ -66,4 +66,9 @@ public class NodeConfig {
             throw new RuntimeException(e);
         }
     }
+
+    public static String getHost() {
+        JsonObject cfg = getCfg();
+        return cfg.get("host").getAsString();
+    }
 }

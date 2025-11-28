@@ -1,5 +1,6 @@
 package de.redstonecloud.cloud.cluster;
 
+import io.grpc.ManagedChannel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,4 +15,5 @@ public class ClusterNode {
     private String name;
     private String id;
     private String token;
+    private ManagedChannel channel;
 }
