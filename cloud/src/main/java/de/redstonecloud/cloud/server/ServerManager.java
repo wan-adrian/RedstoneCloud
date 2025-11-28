@@ -6,8 +6,8 @@ import com.google.gson.JsonObject;
 import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.config.CloudConfig;
-import de.redstonecloud.cloud.config.entry.RedisEntry;
+import de.redstonecloud.cloud.config.entires.BridgeSettings;
+import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
 import de.redstonecloud.cloud.events.defaults.ServerStartEvent;
 import de.redstonecloud.shared.utils.Directories;
@@ -281,7 +281,14 @@ public class ServerManager {
 
         String node = template.getNodes() != null && !template.getNodes().isEmpty() ? template.getNodes().getFirst() : "";
 
-        RedisEntry redisCfg = CloudConfig.getRedis();
+        RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
+        BridgeSettings bridgeSettings = RedstoneCloud.getConfig().bridge();
+
+        JsonObject bridgeJson = new JsonObject();
+
+        bridgeJson.addProperty("hub_tempalte", bridgeSettings.hubTemplate());
+        bridgeJson.addProperty("hubcommand_desc", bridgeSettings.hubDescription());
+        bridgeJson.addProperty("hubcommand_no_hub_available", bridgeSettings.hubNotAvailable());
 
         ServerImpl server = ServerImpl.builder()
                 .template(template)
@@ -292,9 +299,9 @@ public class ServerManager {
                 .nodeId(node)
                 .env(Map.of(
                         Keys.ENV_REDIS_IP, redisCfg.ip(),
-                        Keys.ENV_REDIS_PORT, redisCfg.port(),
-                        Keys.ENV_REDIS_DB, String.valueOf(redisCfg.db()),
-                        "BRIDGE_CFG", CloudConfig.getCfg().get("bridge").getAsJsonObject().toString()
+                        Keys.ENV_REDIS_PORT, String.valueOf(redisCfg.port()),
+                        Keys.ENV_REDIS_DB, String.valueOf(redisCfg.dbId()),
+                        "BRIDGE_CFG", bridgeJson.toString()
                 ))
                 .selectedMethod(StartMethods.SUBPROCESS).build();
 

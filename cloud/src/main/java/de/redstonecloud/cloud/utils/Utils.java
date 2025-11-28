@@ -3,10 +3,8 @@ package de.redstonecloud.cloud.utils;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.server.TemplateImpl;
 import de.redstonecloud.shared.server.Server;
-import de.redstonecloud.shared.server.Template;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -25,12 +23,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class Utils {
-    public static String[] dropFirstString(String[] input) {
-        String[] anstring = new String[input.length - 1];
-        System.arraycopy(input, 1, anstring, 0, input.length - 1);
-        return anstring;
-    }
-
     public static String readFileFromResources(String filename) throws IOException {
         try (InputStream inputStream = RedstoneCloud.class.getClassLoader().getResourceAsStream(filename)) {
             if (inputStream == null) {
@@ -318,7 +310,7 @@ public class Utils {
     }
 
     private static void finalizeSetup(RedisConfig redisConfig) {
-        try {
+        /*try {
             JsonObject cfgFile = CloudConfig.getCfg();
             cfgFile.addProperty("redis_port", redisConfig.port);
             cfgFile.addProperty("redis_bind", redisConfig.bind);
@@ -332,7 +324,7 @@ public class Utils {
             CloudConfig.getCfg(true);
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
+        }*/
     }
 
     private static void waitForUserToStart() {

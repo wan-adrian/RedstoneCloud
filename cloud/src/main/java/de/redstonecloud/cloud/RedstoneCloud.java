@@ -2,190 +2,173 @@ package de.redstonecloud.cloud;
 
 import de.redstonecloud.api.encryption.KeyManager;
 import de.redstonecloud.api.encryption.cache.KeyCache;
-import de.redstonecloud.api.redis.broker.BrokerHelper;
-import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.cluster.ClusterManager;
+import de.redstonecloud.cloud.commands.defaults.*;
 import de.redstonecloud.cloud.config.CloudConfig;
-import de.redstonecloud.cloud.config.entry.RedisEntry;
 import de.redstonecloud.cloud.events.EventManager;
 import de.redstonecloud.cloud.player.PlayerManager;
 import de.redstonecloud.cloud.plugin.PluginManager;
-import de.redstonecloud.cloud.redis.PacketHandler;
 import de.redstonecloud.cloud.redis.RedisInstance;
-import de.redstonecloud.cloud.commands.CommandManager;
-import de.redstonecloud.cloud.console.Console;
+import de.redstonecloud.shared.commands.CommandManager;
+import de.redstonecloud.shared.config.SnakeYamlConfig;
+import de.redstonecloud.shared.console.Console;
 import de.redstonecloud.cloud.scheduler.TaskScheduler;
 import de.redstonecloud.cloud.scheduler.defaults.CheckTemplateTask;
 import de.redstonecloud.cloud.server.ServerManager;
-import de.redstonecloud.shared.utils.Directories;
+import de.redstonecloud.shared.console.ConsoleThread;
 import de.redstonecloud.cloud.utils.Translator;
 import de.redstonecloud.cloud.utils.Utils;
+import eu.okaeri.configs.ConfigManager;
 import lombok.Getter;
 import de.redstonecloud.api.redis.broker.Broker;
 import de.redstonecloud.api.redis.cache.Cache;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.security.PublicKey;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 @Getter
 @Log4j2
 public class RedstoneCloud {
-    @Getter
-    private static RedstoneCloud instance;
-    @Getter
-    public static String workingDir;
-    @Getter
-    public static Cache cache;
-    private static RedisInstance redisInstance;
-    @Getter
-    private static boolean running = false;
-    @Getter
-    @Nullable
-    private ClusterManager clusterManager;
+    @Getter private static RedstoneCloud instance;
+    @Getter public static String workingDir;
+    @Getter public static Cache cache;
+    @Getter private static boolean running = false;
+    @Getter protected static Broker broker;
+    @Getter protected static CloudConfig config;
+    protected static RedisInstance redisInstance;
 
-    @Getter private static Broker broker;
-
-    @SneakyThrows
-    public static void main(String[] args) {
-        workingDir = System.getProperty("user.dir");
-        if (!Directories.setupCheck.exists()) Utils.setup();
-
-        RedisEntry redisCfg = CloudConfig.getRedis();
-
-        System.setProperty(Keys.PROPERTY_REDIS_PORT, redisCfg.port());
-        System.setProperty(Keys.PROPERTY_REDIS_IP, redisCfg.ip());
-        System.setProperty(Keys.PROPERTY_REDIS_DB, String.valueOf(redisCfg.db()));
-
-        if(redisCfg.useInternal()) {
-            redisInstance = new RedisInstance();
-        }
-
-        Thread.sleep(2000);
-
-        cache = new Cache();
-
-        try {
-            log.info(Translator.translate("cloud.startup.redis"));
-            broker = new Broker("cloud", BrokerHelper.constructRegistry(), "cloud");
-            broker.listen("cloud", PacketHandler::handle);
-        } catch (Exception e) {
-            log.error(System.getenv(Keys.ENV_REDIS_IP) != null ? System.getenv(Keys.ENV_REDIS_IP) : System.getProperty(Keys.PROPERTY_REDIS_IP));
-            log.error(System.getenv(Keys.ENV_REDIS_PORT) != null ? System.getenv(Keys.ENV_REDIS_PORT) : System.getProperty(Keys.PROPERTY_REDIS_PORT));
-            throw new RuntimeException("Cannot connect to Redis: " + e);
-        }
-
-        System.setProperty("java.net.preferIPv4Stack", "true");
-        System.setProperty("log4j.skipJansi", "false");
-        System.setProperty("Dterminal.jline", "true");
-        System.setProperty("Dterminal.ansi", "true");
-        System.setProperty("Djansi.passthrough", "true");
-
-        RedstoneCloud cloud = new RedstoneCloud();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(cloud::stop));
-    }
-
+    @Nullable private ClusterManager clusterManager;
     private ConsoleThread consoleThread;
-    protected PlayerManager playerManager;
-    protected ServerManager serverManager;
-    protected CommandManager commandManager;
-    protected Console console;
-    protected PluginManager pluginManager;
-    protected EventManager eventManager;
+    private PlayerManager playerManager;
+    private ServerManager serverManager;
+    private CommandManager commandManager;
+    private Console console;
+    private PluginManager pluginManager;
+    private EventManager eventManager;
+    private TaskScheduler scheduler;
+    private KeyCache keyCache;
 
-    protected boolean stopped = false;
-
-    protected TaskScheduler scheduler;
-    protected KeyCache keyCache;
-
-    public RedstoneCloud() {
+    protected RedstoneCloud() {
         instance = this;
         boot();
     }
 
-    public void boot() {
+    private void boot() {
         running = true;
+        log.info(Translator.translate("cloud.startup"));
 
+        log.debug("[BOOT] Starting cloud scheduler");
         this.scheduler = new TaskScheduler(new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors()));
 
+        log.debug("[BOOT] Creating public key");
         PublicKey publicKey = KeyManager.init();
         this.keyCache = new KeyCache();
         this.keyCache.addKey("cloud", publicKey);
 
-        log.info(Translator.translate("cloud.startup"));
-
+        log.debug("[BOOT] Creating folders");
         Utils.createBaseFolders();
 
+        log.debug("[BOOT] Starting PlayerManager");
         this.playerManager = new PlayerManager();
+        log.debug("[BOOT] Starting ServerManager");
         this.serverManager = ServerManager.getInstance();
-        this.commandManager = new CommandManager();
-        commandManager.loadCommands();
-
+        log.debug("[BOOT] Starting CommandManager");
+        this.commandManager = CommandManager.getInstance();
+        log.debug("[BOOT] Starting EventManager");
         this.eventManager = new EventManager(this);
-
+        log.debug("[BOOT] Starting PluginManager");
         this.pluginManager = new PluginManager(this);
+
+        log.debug("[BOOT] Loading all plugins");
         pluginManager.loadAllPlugins();
 
-        this.console = new Console(this);
+        log.debug("[BOOT] Start console");
+        this.console = Console.getInstance();
         this.consoleThread = new ConsoleThread();
         this.consoleThread.start();
 
         this.scheduler.scheduleRepeatingTask(new CheckTemplateTask(), 3000L);
-
+        log.debug("[BOOT] Enable all plugins");
         this.pluginManager.enableAllPlugins();
 
-        if(CloudConfig.hasNodes()) {
+
+        if(!config.cluster().nodes().isEmpty()) {
+            log.debug("[BOOT] Loading cluster management");
             clusterManager = ClusterManager.getInstance();
             clusterManager.startServer();
-        }
+        } else log.debug("[BOOT] No clusters connected.");
+
+        initCommands();
     }
 
-    public void stop() {
-        if (this.stopped || !running) {
-            return;
-        }
+    private void initCommands() {
+        log.debug("[BOOT] Loading commands");
 
-        this.stopped = true;
+        commandManager.addCommand(new ConsoleCommand("console"));
+        commandManager.addCommand(new EndCommand("end"));
+        commandManager.addCommand(new InfoCommand("info"));
+        commandManager.addCommand(new StartCommand("start"));
+        commandManager.addCommand(new StopCommand("stop"));
+        commandManager.addCommand(new ListCommand("list"));
+        commandManager.addCommand(new KillCommand("kill"));
+        commandManager.addCommand(new ExecuteCommand("execute"));
+        commandManager.addCommand(new PlayerCommand("player"));
+        commandManager.addCommand(new UpdateCommand("update"));
+
+        log.debug("[BOOT] Registered {} commands", commandManager.getCommandMap().size());
+    }
+
+    public void shutdown() {
+        if (!running)
+            return;
+
         running = false;
+
+        log.debug("[SHUTDOWN] Cancelling all tasks");
         this.scheduler.cancelAll();
 
         try {
             Thread.sleep(200);
             log.info(Translator.translate("cloud.shutdown.started"));
-            boolean a = this.serverManager.stopAll();
-            if(a) log.info(Translator.translate("cloud.shutdown.servers"));
-            Thread.sleep(500);
+
+            log.debug("[SHUTDOWN] Stopping all servers");
+            synchronized(this) {
+                this.serverManager.stopAll();
+            }
+
+            log.debug("[SHUTDOWN] Disable all plugins");
             this.pluginManager.disableAllPlugins();
-            log.info(Translator.translate("cloud.shutdown.plugins"));
+
+            log.debug("[SHUTDOWN] Shutting down EventManager");
             this.eventManager.getThreadedExecutor().shutdown();
+
+            log.debug("[SHUTDOWN] Flushing RC Redis");
             broker.getPool().getResource().flushDB();
+
+            log.debug("[SHUTDOWN] Shutdown Broker");
             broker.shutdown();
 
-            log.info(Translator.translate("cloud.shutdown.complete"));
+            log.debug("[SHUTDOWN] Stopping scheduler");
             this.scheduler.stopScheduler();
 
-            if(redisInstance != null) redisInstance.shutdown();
-            if(clusterManager != null) clusterManager.stopServer();
-        } catch (InterruptedException e) {
-            log.error("Error during shutdown: ", e);
+            if(redisInstance != null) {
+                log.debug("[SHUTDOWN] Stopping internal redis");
+                redisInstance.shutdown();
+            }
+
+            if(clusterManager != null) {
+                log.debug("[SHUTDOWN] Stopping cluster management");
+                clusterManager.stopServer();
+            }
+
+            log.info(Translator.translate("cloud.shutdown.complete"));
         } catch (Exception e) {
             log.error("Unexpected error during shutdown: ", e);
         }
 
         System.exit(0);
-    }
-
-    private class ConsoleThread extends Thread {
-        public ConsoleThread() {
-            super("Console Thread");
-        }
-
-        @Override
-        public void run() {
-            if (isRunning()) console.start();
-        }
     }
 }

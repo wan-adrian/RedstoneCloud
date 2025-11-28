@@ -1,10 +1,10 @@
 package de.redstonecloud.cloud.cluster;
 
+import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.grpc.RCBootServiceImpl;
 import de.redstonecloud.cloud.cluster.grpc.RCClusterServiceImpl;
-import de.redstonecloud.cloud.cluster.grpc.RCNode;
-import de.redstonecloud.cloud.config.CloudConfig;
-import de.redstonecloud.cloud.config.entry.ClusterServerEntry;
+import de.redstonecloud.cloud.config.entires.ClusterSettings;
+import de.redstonecloud.cloud.config.entires.RedisSettings;
 import lombok.Getter;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -51,16 +51,16 @@ public class ClusterManager {
     }
 
     public void startServer() {
-        ClusterServerEntry cfg = CloudConfig.getClusterServer();
+        ClusterSettings clusterSettings = RedstoneCloud.getConfig().cluster();
         try {
-            server = ServerBuilder.forPort(cfg.port())
+            server = ServerBuilder.forPort(clusterSettings.port())
                     .addService(new RCBootServiceImpl())
                     .addService(new RCClusterServiceImpl())
                     //.intercept(new TokenCheck("TOKEN HERE"))
                     .build()
                     .start();
 
-            log.info("Node server is listening on {}", cfg.port());
+            log.info("Node server is listening on {}", clusterSettings.port());
 
         } catch (IOException e) {
             log.error("Failed to start gRPC server", e);

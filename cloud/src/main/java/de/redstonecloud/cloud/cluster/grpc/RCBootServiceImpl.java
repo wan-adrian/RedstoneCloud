@@ -30,15 +30,6 @@ public class RCBootServiceImpl extends RCBootServiceGrpc.RCBootServiceImplBase {
             log.info("Node {} connected", request.getNodeId());
             token = "session-" + request.getNodeId() + "-" + System.currentTimeMillis();
 
-            //connect to node
-            ManagedChannel channel = ManagedChannelBuilder
-                    .forAddress(request.getHostname(), request.getPort())
-                    .usePlaintext()
-                    .intercept(new TokenInject(token))
-                    .build();
-
-
-
             //TODO: add name
             clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, null));
         }

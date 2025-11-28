@@ -1,8 +1,7 @@
-package de.redstonecloud.cloud.console;
+package de.redstonecloud.shared.console;
 
-import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.commands.Command;
-import lombok.RequiredArgsConstructor;
+import de.redstonecloud.shared.commands.AbstractCommand;
+import de.redstonecloud.shared.commands.CommandManager;
 import org.jline.reader.*;
 
 import java.util.List;
@@ -10,9 +9,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 
-@RequiredArgsConstructor
 public class ConsoleCompleter implements Completer {
-    private final RedstoneCloud server;
 
     @Override
     public void complete(LineReader lineReader, ParsedLine parsedLine, List<Candidate> candidates) {
@@ -33,8 +30,8 @@ public class ConsoleCompleter implements Completer {
                 }
             } else if (parsedLine.wordIndex() > 0 && !parsedLine.word().isEmpty()) {
                 String command = parsedLine.words().getFirst();
-                Command cmd;
-                if ((cmd = server.getCommandManager().getCommand(command)) != null) {
+                AbstractCommand cmd;
+                if ((cmd = CommandManager.getInstance().getCommand(command)) != null) {
                     if(parsedLine.words().size() - 2 > cmd.argCount) {
                         return;
                     }
@@ -48,8 +45,8 @@ public class ConsoleCompleter implements Completer {
                 }
             } else {
                 String command = parsedLine.words().getFirst();
-                Command cmd;
-                if ((cmd = server.getCommandManager().getCommand(command)) != null) {
+                AbstractCommand cmd;
+                if ((cmd = CommandManager.getInstance().getCommand(command)) != null) {
                     //check if argCount is reached
                     if (parsedLine.words().size() - 2 > cmd.argCount) {
                         return;
@@ -70,7 +67,7 @@ public class ConsoleCompleter implements Completer {
     }
 
     private void addCandidates(Consumer<String> commandConsumer) {
-        for (String command : server.getCommandManager().getCommandMap().keySet()) {
+        for (String command : CommandManager.getInstance().getCommandMap().keySet()) {
             if (!command.contains(":")) {
                 commandConsumer.accept(command);
             }
