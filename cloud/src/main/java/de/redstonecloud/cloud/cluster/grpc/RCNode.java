@@ -46,4 +46,13 @@ public class RCNode {
                                 .build())
                 .build());
     }
+
+    public void updateServerStatus(String name, String status) {
+        ClusterManager.getInstance().getNodeById(nodeId).send(RCClusteringProto.Payload.newBuilder()
+                        .setServerStatusChange(RCClusteringProto.ServerStatusChange.newBuilder()
+                                .setServer(name)
+                                .setStatus(status)
+                                .build())
+                .build());
+    }
 }

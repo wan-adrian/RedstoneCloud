@@ -3,13 +3,18 @@ package de.redstonecloud.cloud.cluster.grpc;
 import de.redstonecloud.api.RCClusteringProto;
 import de.redstonecloud.api.RCClusteringProto.*;
 import de.redstonecloud.api.RCClusteringServiceGrpc;
-import de.redstonecloud.api.RCGenericProto.*;
+import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.ClusterManager;
+import de.redstonecloud.cloud.server.ServerImpl;
+import de.redstonecloud.cloud.server.ServerManager;
+import de.redstonecloud.shared.server.Server;
 import io.grpc.stub.StreamObserver;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringServiceImplBase {
 
     private final Map<String, StreamObserver<RCClusteringProto.Payload>> nodes = new ConcurrentHashMap<>();
@@ -29,14 +34,34 @@ public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringSe
                         nodes.put(nodeId, outbound);
                         ClusterManager.getInstance().getNodeById(nodeId).setStream(outbound);
 
-                        System.out.println("Node connected: " + nodeId);
-
-                        new RCNode(nodeId).prepareServer("aa", "aa-2");
+                        log.info("Node connected: {} ({})", ClusterManager.getInstance().getNodeNameById(nodeId), nodeId);
                     }
 
                     case SERVERDIED -> {
-                        String server = msg.getServerDied().getServer();
-                        System.out.println("Node " + nodeId + " reports server died: " + server);
+                        String serverName = msg.getServerDied().getServer();
+                        Server server = ServerManager.getInstance().getServer(serverName);
+                        if (server == null) {
+                            log.warn("Received SERVERDIED for unknown server: {}", serverName);
+                            return;
+                        }
+
+                        log.info("Received SERVERDIED for server: {}", serverName);
+                        server.onExit();
+                    }
+
+                    case SERVERPORTSET -> {
+                        String serverName = msg.getServerPortSet().getServer();
+                        int port = msg.getServerPortSet().getPort();
+                        ServerImpl server = (ServerImpl) ServerManager.getInstance().getServer(serverName);
+                        if (server == null) {
+                            log.warn("Received SERVERPORTSET for unknown server: {}", serverName);
+                            return;
+                        }
+
+                        log.info("Received SERVERPORTSET for server: {} with port {}", serverName, port);
+                        server.setPort(port);
+
+
                     }
 
                     default -> {}
@@ -54,11 +79,12 @@ public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringSe
             }
 
             private void disconnect() {
-                if (nodeId != null) {
+                //TODO: Check if this fixes node disconnection issues after sending 1 message
+                /*if (nodeId != null) {
                     nodes.remove(nodeId);
                     System.out.println("Node disconnected: " + nodeId);
                 }
-                try { outbound.onCompleted(); } catch (Exception ignore) {}
+                try { outbound.onCompleted(); } catch (Exception ignore) {}*/
             }
         };
     }

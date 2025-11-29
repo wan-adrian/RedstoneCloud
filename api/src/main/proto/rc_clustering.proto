@@ -32,6 +32,7 @@ message Payload {
     // Master → Node: events
     ServerDied serverDied = 20;
     ServerStatusChange serverStatusChange = 21;
+    ServerPortSet serverPortSet = 22;
 
     // Master → Node: responses to requests
     GenericResponse response = 30;
@@ -89,10 +90,16 @@ message ServerStatusChange {
   string status = 3;
 }
 
+message ServerPortSet {
+  string token = 1;
+  string server = 2;
+  int32 port = 3;
+}
+
 message TempateChanges {
-  repeated string templates = 1;
+  repeated Template templates = 1;
 }
 
 message TypeChanges {
-  repeated string types = 1;
+  repeated Type types = 1;
 }

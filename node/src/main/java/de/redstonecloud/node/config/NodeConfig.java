@@ -20,7 +20,7 @@ public class NodeConfig {
     public static JsonObject getCfg(boolean reload) {
         if (reload || cfg == null) {
             try {
-                cfg = new Gson().fromJson(Files.readString(Paths.get(RedstoneNode.workingDir + "/cloud.json")), JsonObject.class);
+                cfg = new Gson().fromJson(Files.readString(Paths.get(RedstoneNode.getWorkingDir() + "/cloud.json")), JsonObject.class);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -61,7 +61,7 @@ public class NodeConfig {
         JsonObject cfg = getCfg();
         cfg.addProperty("node_id", nodeId);
         try {
-            Files.writeString(Paths.get(RedstoneNode.workingDir + "/cloud.json"), cfg.toString());
+            Files.writeString(Paths.get(RedstoneNode.getWorkingDir() + "/cloud.json"), cfg.toString());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

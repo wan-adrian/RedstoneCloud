@@ -11,5 +11,6 @@ public class Directories {
     public static final File TEMPLATE_CONFIGS_DIR = new File("./template_configs/");
     public static final File LOGS_DIR = new File("./logs/");
     public static final File TYPES_DIR = new File("./types/");
+    public static final File TMP_STORAGE_DIR = new File("./.tmp/");
 
 }

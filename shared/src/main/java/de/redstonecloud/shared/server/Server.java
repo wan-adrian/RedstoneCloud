@@ -45,7 +45,7 @@ public abstract class Server implements ICloudServer, Cacheable {
 
     @Builder.Default
     protected String address = "127.0.0.1";
-    protected final int port;
+    protected int port;
 
     protected final long createdAt;
 
@@ -80,6 +80,7 @@ public abstract class Server implements ICloudServer, Cacheable {
     protected abstract void startRemote();
     protected abstract void killRemote();
     protected abstract void stopRemote();
+    protected abstract void sendStatusRemote(ServerStatus newStatus);
 
     @Override
     public String toString() {
@@ -110,6 +111,8 @@ public abstract class Server implements ICloudServer, Cacheable {
         if (oldStatus != newStatus) {
             updateCache();
         }
+
+        sendStatusRemote(newStatus);
     }
 
     public ServerStatus getStatus() {
@@ -146,6 +149,10 @@ public abstract class Server implements ICloudServer, Cacheable {
 
     public boolean isLocal() {
         return nodeId == null || nodeId.isEmpty() || nodeId.equals(CurrentInstance.getNODE_ID());
+    }
+
+    public boolean isMaster() {
+        return nodeId == null || nodeId.isEmpty();
     }
 
     /**

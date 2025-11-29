@@ -11,3 +11,13 @@ message GenericResponse {
 }
 
 message Empty {}
+
+message Template {
+  string name = 1;
+  string data = 2;
+}
+
+message Type {
+  string name = 1;
+  string config = 2;
+}

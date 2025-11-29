@@ -2,6 +2,7 @@ package de.redstonecloud.cloud.cluster.grpc;
 
 import de.redstonecloud.api.RCBootProto;
 import de.redstonecloud.api.RCBootServiceGrpc;
+import de.redstonecloud.api.RCGenericProto;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.ClusterManager;
 import de.redstonecloud.cloud.cluster.ClusterNode;
@@ -34,13 +35,13 @@ public class RCBootServiceImpl extends RCBootServiceGrpc.RCBootServiceImplBase {
             clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, null));
         }
 
-        List<RCBootProto.Type> types = RedstoneCloud.getInstance().getServerManager().getTypes().clone().values().stream().map(type -> RCBootProto.Type.newBuilder()
+        List<RCGenericProto.Type> types = RedstoneCloud.getInstance().getServerManager().getTypes().clone().values().stream().map(type -> RCGenericProto.Type.newBuilder()
                 .setName(type.name())
                 .setConfig(type.raw())
                 .build()
         ).toList();
 
-        List<RCBootProto.Template> templates = RedstoneCloud.getInstance().getServerManager().getTemplatesForNode(request.getNodeId()).stream().map(template -> RCBootProto.Template.newBuilder()
+        List<RCGenericProto.Template> templates = RedstoneCloud.getInstance().getServerManager().getTemplatesForNode(request.getNodeId()).stream().map(template -> RCGenericProto.Template.newBuilder()
                 .setName(template.getName())
                 .setData(template.getRaw())
                 .build()

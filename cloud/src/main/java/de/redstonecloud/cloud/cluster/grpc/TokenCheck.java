@@ -23,7 +23,6 @@ public class TokenCheck implements ServerInterceptor {
             return new ServerCall.Listener<>() {}; // stop processing
         }
 
-        // token is valid → continue normally
         return next.startCall(call, headers);
     }
 }

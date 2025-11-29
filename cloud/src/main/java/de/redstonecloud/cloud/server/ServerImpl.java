@@ -1,5 +1,6 @@
 package de.redstonecloud.cloud.server;
 
+import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.api.redis.broker.packet.defaults.server.RemoveServerPacket;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.grpc.RCNode;
@@ -17,6 +18,10 @@ import java.util.Arrays;
 @Slf4j
 @SuperBuilder
 public class ServerImpl extends Server {
+    public void setPort(int port) {
+        this.port = port;
+    }
+
     @Override
     protected void writeConsoleRemove(String command) {
         new RCNode(nodeId).executeCommand(name, command);
@@ -26,9 +31,10 @@ public class ServerImpl extends Server {
     public void initName(Integer forceId) {
         String candidateName;
 
-        if (forceId != null) {
-            candidateName = getTemplate().getName() + "-" + forceId;
+        if (forceId != null && forceId > 0) {
+            candidateName = getTemplate().getName() + template.getSeperator() + forceId;
             if (ServerManager.getInstance().getServer(candidateName) == null) {
+                name = candidateName;
                 return; // Name is available
             }
             log.warn("Server with name {} already exists, generating new name", candidateName);
@@ -44,7 +50,7 @@ public class ServerImpl extends Server {
     private int findAvailableServerId() {
         int serverId = 1;
         String baseName = template.getName();
-        while (ServerManager.getInstance().getServer(baseName + "-" + serverId) != null) {
+        while (ServerManager.getInstance().getServer(baseName + template.getSeperator() + serverId) != null) {
             serverId++;
         }
         return serverId;
@@ -89,5 +95,11 @@ public class ServerImpl extends Server {
     @Override
     protected void stopRemote() {
         new RCNode(nodeId).stopServer(name, false);
+    }
+
+    @Override
+    protected void sendStatusRemote(ServerStatus newStatus) {
+        if(!isLocal())
+            new RCNode(nodeId).updateServerStatus(name, newStatus.name());
     }
 }

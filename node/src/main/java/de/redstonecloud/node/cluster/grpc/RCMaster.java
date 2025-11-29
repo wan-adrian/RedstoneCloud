@@ -6,4 +6,7 @@ public class RCMaster {
     public static void serverDied(String serverName) {
         ClusterClient.getInstance().sendServerDied(serverName);
     }
+    public static void port(String serverName, int port) {
+        ClusterClient.getInstance().sendServerPort(serverName, port);
+    }
 }

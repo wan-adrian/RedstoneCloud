@@ -4,20 +4,32 @@ import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.node.cluster.ClusterClient;
 import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.config.entry.RedisEntry;
+import de.redstonecloud.node.server.ServerManager;
+import de.redstonecloud.shared.utils.Directories;
+import lombok.Getter;
+import org.apache.commons.io.FileUtils;
 
+@Getter
 public class RedstoneNode {
-    public static String workingDir;
+    private ServerManager serverManager;
+    private ClusterClient clusterClient;
 
-    public static void main(String[] args) {
-        workingDir = System.getProperty("user.dir");
+    @Getter protected static String workingDir;
 
-        RedisEntry redisCfg = NodeConfig.getRedis();
+    protected RedstoneNode() {
+        this.serverManager = ServerManager.getInstance();
 
-        System.setProperty(Keys.PROPERTY_REDIS_PORT, redisCfg.port());
-        System.setProperty(Keys.PROPERTY_REDIS_IP, redisCfg.ip());
-        System.setProperty(Keys.PROPERTY_REDIS_DB, String.valueOf(redisCfg.db()));
-
-        ClusterClient clusterClient = ClusterClient.getInstance();
+        clusterClient = ClusterClient.getInstance();
         clusterClient.start();
+    }
+
+    public void shutdown() {
+        this.serverManager.stopAll();
+        this.clusterClient.shutdown();
+        //remove tmp files
+        try {
+            FileUtils.deleteDirectory(Directories.TMP_STORAGE_DIR);
+        } catch (Exception ignored) {
+        }
     }
 }

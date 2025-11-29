@@ -9,12 +9,14 @@ import de.redstonecloud.node.cluster.grpc.RCMaster;
 import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.config.entry.MasterEntry;
 
+import de.redstonecloud.node.server.ServerManager;
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.concurrent.TimeUnit;
@@ -32,6 +34,7 @@ public class ClusterClient {
     private volatile boolean loggedIn = false;
 
     private volatile String token;
+    @Setter
     private volatile boolean streamActive = false;
 
     public static ClusterClient getInstance() {
@@ -68,10 +71,6 @@ public class ClusterClient {
                     .build();
 
             doLogin();
-
-            // Quick test event:
-            RCMaster.serverDied("test");
-
         } catch (Exception e) {
             log.error("Connection failed: {}", e.getMessage());
             loggedIn = false;
@@ -100,6 +99,9 @@ public class ClusterClient {
 
             this.token = res.getToken();
             this.loggedIn = true;
+
+            ServerManager.getInstance().reloadServerTypes(res.getTypesList().stream().map(t -> t.getConfig()).toList());
+            ServerManager.getInstance().reloadTemplates(res.getTemplatesList().stream().map(t -> t.getData()).toList());
 
             log.info("Logged into master successfully. Token={}", token);
 
@@ -190,59 +192,6 @@ public class ClusterClient {
         log.info("Cluster client shut down.");
     }
 
-    /* ====================================================================
-       INBOUND HANDLER  (MASTER → NODE)
-       ==================================================================== */
-
-    private class InboundHandler implements StreamObserver<Payload> {
-
-        @Override
-        public void onNext(Payload msg) {
-
-            switch (msg.getPayloadCase()) {
-
-                case PREPARESERVER -> {
-                    log.info("Master → prepareServer {}", msg.getPrepareServer().getName());
-                    sendServerDied(msg.getPrepareServer().getName());
-                }
-
-                case STARTSERVER -> {
-                    log.info("Master → startServer {}", msg.getStartServer().getServer());
-                }
-
-                case STOPSERVER -> {
-                    log.info("Master → stopServer {}", msg.getStopServer().getServer());
-                }
-
-                case EXECUTECOMMAND -> {
-                    log.info("Master → command {}", msg.getExecuteCommand().getCommand());
-                }
-
-                case RESPONSE -> {
-                    log.info("Master → response {}", msg.getResponse().getMessage());
-                }
-
-                default -> log.warn("Master → Unknown message: {}", msg.getPayloadCase());
-            }
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            log.error("Stream error: {}", t.getMessage());
-            streamActive = false;
-        }
-
-        @Override
-        public void onCompleted() {
-            log.warn("Master closed stream.");
-            streamActive = false;
-        }
-    }
-
-    /* ====================================================================
-       PUBLIC SEND METHODS (Node → Master)
-       ==================================================================== */
-
     public void sendServerDied(String server) {
         if (!streamActive) {
             System.out.println("Stream not active, cannot send serverDied for " + server);
@@ -255,6 +204,24 @@ public class ClusterClient {
                                 ServerDied.newBuilder()
                                         .setToken(token)
                                         .setServer(server)
+                        )
+                        .build()
+        );
+    }
+
+    public void sendServerPort(String server, int port) {
+        if (!streamActive) {
+            System.out.println("Stream not active, cannot send serverDied for " + server);
+            return;
+        }
+
+        outbound.onNext(
+                Payload.newBuilder()
+                        .setServerPortSet(
+                                ServerPortSet.newBuilder()
+                                        .setToken(token)
+                                        .setServer(server)
+                                        .setPort(port)
                         )
                         .build()
         );

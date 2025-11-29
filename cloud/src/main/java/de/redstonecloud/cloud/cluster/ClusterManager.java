@@ -3,8 +3,10 @@ package de.redstonecloud.cloud.cluster;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.grpc.RCBootServiceImpl;
 import de.redstonecloud.cloud.cluster.grpc.RCClusterServiceImpl;
+import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entires.ClusterSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
+import de.redstonecloud.cloud.config.types.Node;
 import lombok.Getter;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -24,9 +26,12 @@ public class ClusterManager {
     private static List<ClusterNode> nodes = new ArrayList<>();
     private static Map<String, ClusterNode> tokenNodes = new HashMap<>();
     private static Map<String, ClusterNode> idNodes = new HashMap<>();
+    private static Map<String, String> idNameMap = new HashMap<>();
 
     private ClusterManager() {
-
+        for (Node node : RedstoneCloud.getConfig().cluster().nodes()) {
+            idNameMap.put(node.id(), node.name());
+        }
     }
 
     public static boolean isCluster() {
@@ -87,5 +92,9 @@ public class ClusterManager {
         if (server != null) {
             server.awaitTermination();
         }
+    }
+
+    public String getNodeNameById(String id) {
+        return idNameMap.get(id);
     }
 }

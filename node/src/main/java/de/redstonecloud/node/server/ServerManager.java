@@ -1,18 +1,8 @@
-package de.redstonecloud.cloud.server;
+package de.redstonecloud.node.server;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import de.redstonecloud.api.RCClusteringProto;
-import de.redstonecloud.api.RCGenericProto;
 import de.redstonecloud.api.components.ServerStatus;
-import de.redstonecloud.api.util.Keys;
-import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.cluster.ClusterManager;
-import de.redstonecloud.cloud.cluster.ClusterNode;
-import de.redstonecloud.cloud.config.entires.BridgeSettings;
-import de.redstonecloud.cloud.config.entires.RedisSettings;
-import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
-import de.redstonecloud.cloud.events.defaults.ServerStartEvent;
+import de.redstonecloud.node.cluster.grpc.RCMaster;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
 import de.redstonecloud.shared.files.TemplateConfig;
 import de.redstonecloud.shared.files.TypeConfig;
@@ -20,22 +10,23 @@ import de.redstonecloud.shared.files.template.TemplateBehavior;
 import de.redstonecloud.shared.files.template.TemplateInfo;
 import de.redstonecloud.shared.files.type.TypeDownloads;
 import de.redstonecloud.shared.files.type.TypeInfo;
-import de.redstonecloud.shared.utils.Directories;
 import de.redstonecloud.shared.server.Server;
 import de.redstonecloud.shared.server.ServerType;
 import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.shared.startmethods.StartMethods;
+import de.redstonecloud.shared.utils.Directories;
 import de.redstonecloud.shared.utils.SharedUtils;
 import eu.okaeri.configs.ConfigManager;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -48,7 +39,6 @@ import java.util.stream.Collectors;
 @Log4j2
 public class ServerManager {
     private static final Gson GSON = new Gson();
-    private static final int DEFAULT_SHUTDOWN_TIME_MS = 5000;
     private static final int MIN_PORT = 10000;
     private static final int MAX_PORT = 50000;
 
@@ -77,40 +67,25 @@ public class ServerManager {
 
     private ServerManager() {
         log.debug("Initializing ServerManager");
-        loadServerTypes();
-        loadTemplates();
-        log.info("ServerManager initialized with {} types and {} templates",
-                types.size(), templates.size());
     }
 
     /**
      * Loads all template configurations from the template_configs directory.
      */
-    private void loadTemplates() {
-        Path templatesDir = Directories.TEMPLATE_CONFIGS_DIR.toPath();
-
+    private Template loadTemplate(String data) {
+        String randomFileName = "template_load_" + UUID.randomUUID() + ".yml";
         try {
-            Files.createDirectories(templatesDir);
+            //save to temp file
+            Path file = Directories.TMP_STORAGE_DIR.toPath().resolve(randomFileName).toAbsolutePath();
+            Files.writeString(file, data, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(templatesDir, "*.yml")) {
-                for (Path file : stream) {
-                    Template t = loadTemplate(file);
-                    templates.put(t.getName(), t);
-                    log.debug("Loaded template: {}", t.getName());
-                }
-            }
+            System.out.println("YAML CONTENT:");
+            System.out.println(Files.readString(file));
 
-            log.debug("Loaded {} templates", templates.size());
-        } catch (IOException e) {
-            log.error("Failed to load templates from directory: {}", templatesDir, e);
-        }
-    }
-
-    private Template loadTemplate(Path file) {
-        try {
             TemplateConfig cfg = ConfigManager.create(TemplateConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
-                it.withBindFile(file.toFile());
+                //from raw string, data is the yml file content
+                it.withBindFile(file);
                 it.withRemoveOrphans(true);
                 it.saveDefaults();
                 it.load(true);
@@ -148,9 +123,9 @@ public class ServerManager {
 
             return template;
         } catch (IOException e) {
-            log.error("Failed to read template file: {}", file.getFileName(), e);
+            log.error("Failed to read template file: {}", randomFileName, e);
         } catch (Exception e) {
-            log.error("Failed to parse template file: {}", file.getFileName(), e);
+            log.error("Failed to parse template file: {}", randomFileName, e);
         }
 
         return null;
@@ -159,133 +134,92 @@ public class ServerManager {
     /**
      * Reloads templates, stops running servers if template does no longer exist
      */
-    public void reloadTemplates() {
+    public void reloadTemplates(List<String> jsonData) {
         Object2ObjectOpenHashMap<String, Template> newTemplates = new Object2ObjectOpenHashMap<>();
-        Path templatesDir = Directories.TEMPLATE_CONFIGS_DIR.toPath();
 
-        try {
-            Files.createDirectories(templatesDir);
-
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(templatesDir, "*.yml")) {
-                for (Path file : stream) {
-                    Template t = loadTemplate(file);
-                    newTemplates.put(t.getName(), t);
-                    log.debug("Loaded template: {}", t.getName());
-                }
-            }
-
-            //stop servers with no existing template anymore
-            for (Server server : servers.values()) {
-                if (!newTemplates.containsKey(server.getTemplate().getName())) {
-                    log.info("Stopping server {} as its template no longer exists", server.getName());
-                    server.kill();
-                }
-            }
-
-            List<String> nodesToNotify = new ArrayList<>();
-
-            Set<String> oldTemplateNames = this.templates.keySet();
-            Set<String> newTemplateNames = newTemplates.keySet();
-
-            Set<String> addedTemplates = new HashSet<>(newTemplateNames);
-            addedTemplates.removeAll(oldTemplateNames);
-            for (String added : addedTemplates) {
-                log.info("Added template: {}", added);
-
-                if (newTemplates.get(added).getNodes() != null) {
-                    nodesToNotify.addAll(newTemplates.get(added).getNodes());
-                }
-            }
-            Set<String> removedTemplates = new HashSet<>(oldTemplateNames);
-            removedTemplates.removeAll(newTemplateNames);
-            for (String removed : removedTemplates) {
-                log.info("Removed template: {}", removed);
-
-                if (this.templates.get(removed).getNodes() != null) {
-                    nodesToNotify.addAll(this.templates.get(removed).getNodes());
-                }
-            }
-            //updated templates
-            Set<String> commonTemplates = new HashSet<>(oldTemplateNames);
-            commonTemplates.retainAll(newTemplateNames);
-            for (String common : commonTemplates) {
-                if (!GSON.toJson(this.templates.get(common).getRaw())
-                        .equals(GSON.toJson(newTemplates.get(common).getRaw()))) {
-                    log.info("Updated template: {}", common);
-
-                    if (newTemplates.get(common).getNodes() != null) {
-                        nodesToNotify.addAll(newTemplates.get(common).getNodes());
-                    }
-                }
-            }
-
-            for (Map.Entry<String, Template> entry : newTemplates.entrySet()) {
-                if (this.templates.containsKey(entry.getKey())) {
-                    this.templates.get(entry.getKey()).merge(entry.getValue());
-                } else {
-                    this.templates.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-            for (String oldTemplateName : oldTemplateNames) {
-                if (!newTemplates.containsKey(oldTemplateName)) {
-                    this.templates.remove(oldTemplateName);
-                }
-            }
-
-            log.debug("Reloaded {} templates", templates.size());
-
-            //notify nodes if there are
-            if (ClusterManager.isCluster()) {
-                for (String nodeId : nodesToNotify.stream().distinct().toList()) {
-                    List<RCGenericProto.Template> templates = RedstoneCloud.getInstance().getServerManager().getTemplatesForNode(nodeId).stream().map(template -> RCGenericProto.Template.newBuilder()
-                            .setName(template.getName())
-                            .setData(template.getRaw())
-                            .build()
-                    ).toList();
-
-                    ClusterManager.getInstance().getNodeById(nodeId).send(RCClusteringProto.Payload.newBuilder()
-                            .setTemplateChanges(RCClusteringProto.TempateChanges.newBuilder()
-                                    .addAllTemplates(templates)
-                                    .build())
-                            .build());
-
-                }
-            }
-        } catch (IOException e) {
-            log.error("Failed to load templates from directory: {}", templatesDir, e);
+        for (String data : jsonData) {
+            Template t = loadTemplate(SharedUtils.convertJsonToYaml(data));
+            newTemplates.put(t.getName(), t);
+            log.debug("Loaded template: {}", t.getName());
         }
+
+        //stop servers with no existing template anymore
+        for (Server server : servers.values()) {
+            if (!newTemplates.containsKey(server.getTemplate().getName())) {
+                log.info("Stopping server {} as its template no longer exists", server.getName());
+                server.kill();
+            }
+        }
+
+        List<String> nodesToNotify = new ArrayList<>();
+
+        Set<String> oldTemplateNames = this.templates.keySet();
+        Set<String> newTemplateNames = newTemplates.keySet();
+
+        Set<String> addedTemplates = new HashSet<>(newTemplateNames);
+        addedTemplates.removeAll(oldTemplateNames);
+        for (String added : addedTemplates) {
+            log.info("Added template: {}", added);
+
+            if (newTemplates.get(added).getNodes() != null) {
+                nodesToNotify.addAll(newTemplates.get(added).getNodes());
+            }
+        }
+        Set<String> removedTemplates = new HashSet<>(oldTemplateNames);
+        removedTemplates.removeAll(newTemplateNames);
+        for (String removed : removedTemplates) {
+            log.info("Removed template: {}", removed);
+
+            if (this.templates.get(removed).getNodes() != null) {
+                nodesToNotify.addAll(this.templates.get(removed).getNodes());
+            }
+        }
+        //updated templates
+        Set<String> commonTemplates = new HashSet<>(oldTemplateNames);
+        commonTemplates.retainAll(newTemplateNames);
+        for (String common : commonTemplates) {
+            if (!GSON.toJson(this.templates.get(common).getRaw())
+                    .equals(GSON.toJson(newTemplates.get(common).getRaw()))) {
+                log.info("Updated template: {}", common);
+
+                if (newTemplates.get(common).getNodes() != null) {
+                    nodesToNotify.addAll(newTemplates.get(common).getNodes());
+                }
+            }
+        }
+
+        for (Map.Entry<String, Template> entry : newTemplates.entrySet()) {
+            if (this.templates.containsKey(entry.getKey())) {
+                this.templates.get(entry.getKey()).merge(entry.getValue());
+            } else {
+                this.templates.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        for (String oldTemplateName : oldTemplateNames) {
+            if (!newTemplates.containsKey(oldTemplateName)) {
+                this.templates.remove(oldTemplateName);
+            }
+        }
+
+        log.debug("Reloaded {} templates", templates.size());
     }
 
-    /**
-     * Loads all server type configurations from the types directory.
-     */
-    private void loadServerTypes() {
-        Path typesDir = Directories.TYPES_DIR.toPath();
 
+    private ServerType loadServerType(String data) {
+        String randomFileName = "type_load_" + UUID.randomUUID() + ".yml";
         try {
-            Files.createDirectories(typesDir);
+            //save to temp file
+            Directories.TMP_STORAGE_DIR.mkdirs();
+            Path file = Directories.TMP_STORAGE_DIR.toPath().resolve(randomFileName).toAbsolutePath();
+            Files.writeString(file, data, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(typesDir, "*.yml")) {
-                for (Path file : stream) {
-                    ServerType type = loadServerType(file);
-                    types.put(type.name(), type);
-                    log.debug("Loaded server type: {}", type.name());
+            System.out.println("YAML CONTENT:");
+            System.out.println(Files.readString(file));
 
-                }
-            }
-
-            log.debug("Loaded {} server types", types.size());
-        } catch (IOException e) {
-            log.error("Failed to load server types from directory: {}", typesDir, e);
-        }
-    }
-
-    private ServerType loadServerType(Path file) {
-        try {
             TypeConfig cfg = ConfigManager.create(TypeConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
-                it.withBindFile(file.toFile());
+                it.withBindFile(file);
                 it.withRemoveOrphans(true);
                 it.saveDefaults();
                 it.load(true);
@@ -307,9 +241,9 @@ public class ServerManager {
 
             return serverType;
         } catch (IOException e) {
-            log.error("Failed to read server type file: {}", file.getFileName(), e);
+            log.error("Failed to read server type file: {}", randomFileName, e);
         } catch (Exception e) {
-            log.error("Failed to parse server type file: {}", file.getFileName(), e);
+            log.error("Failed to parse server type file: {}", randomFileName, e);
         }
 
         return null;
@@ -318,94 +252,68 @@ public class ServerManager {
     /**
      * Reloads server types from configuration files.
      */
-    public void reloadServerTypes() {
+    public void reloadServerTypes(List<String> jsonData) {
         Object2ObjectOpenHashMap<String, ServerType> newTypes = new Object2ObjectOpenHashMap<>();
-        Path typesDir = Directories.TYPES_DIR.toPath();
 
-        try {
-            Files.createDirectories(typesDir);
-
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(typesDir, "*.yml")) {
-                for (Path file : stream) {
-                    ServerType t = loadServerType(file);
-                    newTypes.put(t.name(), t);
-                    log.debug("Loaded type: {}", t.name());
-                }
-            }
-
-            //stop servers with no existing template anymore - if template is based on removed type, remove it too
-            for (Server server : servers.values()) {
-                if (!newTypes.containsKey(server.getType().name())) {
-                    log.info("Stopping server {} as its type no longer exists", server.getName());
-                    server.kill();
-
-                    //also remove template
-                    String templateName = server.getTemplate().getName();
-                    if (templates.containsKey(templateName)) {
-                        log.info("Removing template {} as its type no longer exists", templateName);
-                        templates.remove(templateName);
-                    }
-                }
-            }
-
-            Set<String> oldTypeNames = this.types.keySet();
-            Set<String> newTypeNames = newTypes.keySet();
-
-            Set<String> addedTypes = new HashSet<>(newTypeNames);
-            addedTypes.removeAll(oldTypeNames);
-            for (String added : addedTypes) {
-                log.info("Added type: {}", added);
-            }
-            Set<String> removedTypes = new HashSet<>(oldTypeNames);
-            removedTypes.removeAll(newTypeNames);
-            for (String removed : removedTypes) {
-                log.info("Removed types: {}", removed);
-            }
-            //updated types
-            Set<String> commonTypes = new HashSet<>(oldTypeNames);
-            commonTypes.retainAll(newTypeNames);
-            for (String common : commonTypes) {
-                if (!GSON.toJson(this.types.get(common).raw())
-                        .equals(GSON.toJson(newTypes.get(common).raw()))) {
-                    log.info("Updated type: {}", common);
-                }
-            }
-
-            for (Map.Entry<String, ServerType> entry : newTypes.entrySet()) {
-                if (this.types.containsKey(entry.getKey())) {
-                    this.types.put(entry.getKey(), entry.getValue());
-                } else {
-                    this.types.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-            for (String oldTypeName : oldTypeNames) {
-                if (!newTypes.containsKey(oldTypeName)) {
-                    this.types.remove(oldTypeName);
-                }
-            }
-
-            log.debug("Reloaded {} types", templates.size());
-
-            //notify nodes if there are
-            if (ClusterManager.isCluster()) {
-                List<RCGenericProto.Type> types = RedstoneCloud.getInstance().getServerManager().getTypes().clone().values().stream().map(type -> RCGenericProto.Type.newBuilder()
-                        .setName(type.name())
-                        .setConfig(type.raw())
-                        .build()
-                ).toList();
-
-                for (ClusterNode node : ClusterManager.getInstance().getNodes()) {
-                    node.send(RCClusteringProto.Payload.newBuilder()
-                            .setTypeChanges(RCClusteringProto.TypeChanges.newBuilder()
-                                    .addAllTypes(types)
-                                    .build())
-                            .build());
-                }
-            }
-        } catch (IOException e) {
-            log.error("Failed to load templates from directory: {}", typesDir, e);
+        for (String data : jsonData) {
+            ServerType type = loadServerType(SharedUtils.convertJsonToYaml(data));
+            newTypes.put(type.name(), type);
+            log.debug("Loaded server type: {}", type.name());
         }
+
+        //stop servers with no existing template anymore - if template is based on removed type, remove it too
+        for (Server server : servers.values()) {
+            if (!newTypes.containsKey(server.getType().name())) {
+                log.info("Stopping server {} as its type no longer exists", server.getName());
+                server.kill();
+
+                //also remove template
+                String templateName = server.getTemplate().getName();
+                if (templates.containsKey(templateName)) {
+                    log.info("Removing template {} as its type no longer exists", templateName);
+                    templates.remove(templateName);
+                }
+            }
+        }
+
+        Set<String> oldTypeNames = this.types.keySet();
+        Set<String> newTypeNames = newTypes.keySet();
+
+        Set<String> addedTypes = new HashSet<>(newTypeNames);
+        addedTypes.removeAll(oldTypeNames);
+        for (String added : addedTypes) {
+            log.info("Added type: {}", added);
+        }
+        Set<String> removedTypes = new HashSet<>(oldTypeNames);
+        removedTypes.removeAll(newTypeNames);
+        for (String removed : removedTypes) {
+            log.info("Removed types: {}", removed);
+        }
+        //updated types
+        Set<String> commonTypes = new HashSet<>(oldTypeNames);
+        commonTypes.retainAll(newTypeNames);
+        for (String common : commonTypes) {
+            if (!GSON.toJson(this.templates.get(common).getRaw())
+                    .equals(GSON.toJson(newTypes.get(common).raw()))) {
+                log.info("Updated type: {}", common);
+            }
+        }
+
+        for (Map.Entry<String, ServerType> entry : newTypes.entrySet()) {
+            if (this.types.containsKey(entry.getKey())) {
+                this.types.put(entry.getKey(), entry.getValue());
+            } else {
+                this.types.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        for (String oldTypeName : oldTypeNames) {
+            if (!newTypes.containsKey(oldTypeName)) {
+                this.types.remove(oldTypeName);
+            }
+        }
+
+        log.debug("Reloaded {} types", templates.size());
     }
 
     /**
@@ -464,6 +372,64 @@ public class ServerManager {
         return templates.get(name);
     }
 
+
+
+
+
+
+    public void prepareServer(String template, String name) {
+        Template temp = getTemplate(template);
+        if (temp == null) {
+            log.error("Cannot prepare server: template {} not found", template);
+            return;
+        }
+
+        ServerImpl server = ServerImpl.builder()
+                .template(temp)
+                .uuid(UUID.randomUUID())
+                .createdAt(System.currentTimeMillis())
+                .type(temp.getType())
+                .port(generateRandomPort())
+                .nodeId("") // Node ID can be set later if needed
+                .env(new HashMap<>()) // Environment variables can be set later if needed
+                .selectedMethod(StartMethods.SUBPROCESS)
+                .build();
+
+        server.setName(name);
+
+        server.prepare();
+        add(server);
+        log.info("Server {} prepared successfully from template {}", server.getName(), temp.getName());
+
+        RCMaster.port(server.getName(), server.getPort());
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Starts a new server with auto-generated ID.
      *
@@ -489,7 +455,7 @@ public class ServerManager {
 
         String node = template.getNodes() != null && !template.getNodes().isEmpty() ? template.getNodes().getFirst() : "";
 
-        RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
+        /*RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
         BridgeSettings bridgeSettings = RedstoneCloud.getConfig().bridge();
 
         JsonObject bridgeJson = new JsonObject();
@@ -537,7 +503,8 @@ public class ServerManager {
         }, TimeUnit.SECONDS, 1);
 
         log.info("Server {} created and scheduled to start", server.getName());
-        return server;
+        return server;*/
+        return null;
     }
 
     private int generateRandomPort() {
