@@ -117,6 +117,7 @@ public class RedstoneCloud {
         commandManager.addCommand(new ExecuteCommand("execute"));
         commandManager.addCommand(new PlayerCommand("player"));
         commandManager.addCommand(new UpdateCommand("update"));
+        commandManager.addCommand(new ReloadCommand("reload"));
 
         log.debug("[BOOT] Registered {} commands", commandManager.getCommandMap().size());
     }

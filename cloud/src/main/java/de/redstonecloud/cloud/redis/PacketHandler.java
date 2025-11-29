@@ -102,7 +102,7 @@ public class PacketHandler {
     }
 
     private static void on(GetBestTemplatePacket packet) {
-        TemplateImpl template = ServerManager.getInstance().getTemplate(packet.getTemplate());
+        Template template = ServerManager.getInstance().getTemplate(packet.getTemplate());
         if (template != null) {
             ServerManager.BestServerResult[] s = ServerManager.getInstance().getBestServer(template);
             if (s.length == 0)

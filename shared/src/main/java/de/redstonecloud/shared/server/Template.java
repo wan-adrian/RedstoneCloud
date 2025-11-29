@@ -107,4 +107,20 @@ public abstract class Template {
     }
 
     protected abstract void createNewServer();
+
+    public Template merge(Template other) {
+        this.name = other.name;
+        this.type = other.type;
+        this.maxPlayers = other.maxPlayers;
+        this.minServers = other.minServers;
+        this.maxServers = other.maxServers;
+        this.staticServer = other.staticServer;
+        this.raw = other.raw;
+        this.seperator = other.seperator;
+        this.nodes = other.nodes;
+        this.stopOnEmpty = other.stopOnEmpty;
+        this.shutdownTimeMs = other.shutdownTimeMs;
+        this.maxBootTimeMs = other.maxBootTimeMs;
+        return this;
+    }
 }

@@ -1,12 +1,10 @@
 package de.redstonecloud.cloud.server;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entires.BridgeSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
@@ -53,7 +51,7 @@ public class ServerManager {
     private static volatile ServerManager INSTANCE;
 
     private final Object2ObjectOpenHashMap<String, ServerType> types = new Object2ObjectOpenHashMap<>();
-    private final Object2ObjectOpenHashMap<String, TemplateImpl> templates = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<String, Template> templates = new Object2ObjectOpenHashMap<>();
     private final ConcurrentHashMap<String, Server> servers = new ConcurrentHashMap<>();
 
     /**
@@ -92,7 +90,9 @@ public class ServerManager {
 
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(templatesDir, "*.yml")) {
                 for (Path file : stream) {
-                    loadTemplate(file);
+                    Template t = loadTemplate(file);
+                    templates.put(t.getName(), t);
+                    log.debug("Loaded template: {}", t.getName());
                 }
             }
 
@@ -102,7 +102,7 @@ public class ServerManager {
         }
     }
 
-    private void loadTemplate(Path file) {
+    private Template loadTemplate(Path file) {
         try {
             TemplateConfig cfg = ConfigManager.create(TemplateConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
@@ -119,7 +119,7 @@ public class ServerManager {
 
             if (type == null) {
                 log.error("Template {} references unknown server type: {}", info.name(), info.type());
-                return;
+                return null;
             }
 
             List<String> nodes = new ArrayList<>();
@@ -142,13 +142,84 @@ public class ServerManager {
                     .nodes(nodes)
                     .build();
 
-            templates.put(info.name(), template);
-            log.debug("Loaded template: {}", info.name());
-
+            return template;
         } catch (IOException e) {
             log.error("Failed to read template file: {}", file.getFileName(), e);
         } catch (Exception e) {
             log.error("Failed to parse template file: {}", file.getFileName(), e);
+        }
+
+        return null;
+    }
+
+    /**
+    * Reloads templates, stops running servers if template does no longer exist
+    */
+    public void reloadTemplates() {
+        Object2ObjectOpenHashMap<String, Template> newTemplates = new Object2ObjectOpenHashMap<>();
+        Path templatesDir = Directories.TEMPLATE_CONFIGS_DIR.toPath();
+
+        try {
+            Files.createDirectories(templatesDir);
+
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(templatesDir, "*.yml")) {
+                for (Path file : stream) {
+                    Template t = loadTemplate(file);
+                    newTemplates.put(t.getName(), t);
+                    log.debug("Loaded template: {}", t.getName());
+                }
+            }
+
+            //stop servers with no existing template anymore
+            for (Server server : servers.values()) {
+                if (!newTemplates.containsKey(server.getTemplate().getName())) {
+                    log.info("Stopping server {} as its template no longer exists", server.getName());
+                    server.kill();
+                }
+            }
+
+            Set<String> oldTemplateNames = this.templates.keySet();
+            Set<String> newTemplateNames = newTemplates.keySet();
+
+            Set<String> addedTemplates = new HashSet<>(newTemplateNames);
+            addedTemplates.removeAll(oldTemplateNames);
+            for (String added : addedTemplates) {
+                log.info("Added template: {}", added);
+            }
+            Set<String> removedTemplates = new HashSet<>(oldTemplateNames);
+            removedTemplates.removeAll(newTemplateNames);
+            for (String removed : removedTemplates) {
+                log.info("Removed template: {}", removed);
+            }
+            //updated templates
+            Set<String> commonTemplates = new HashSet<>(oldTemplateNames);
+            commonTemplates.retainAll(newTemplateNames);
+            for (String common : commonTemplates) {
+                if (!GSON.toJson(this.templates.get(common).getRaw())
+                        .equals(GSON.toJson(newTemplates.get(common).getRaw()))) {
+                    log.info("Updated template: {}", common);
+                }
+            }
+
+            for (Map.Entry<String, Template> entry : newTemplates.entrySet()) {
+                if (this.templates.containsKey(entry.getKey())) {
+                    this.templates.get(entry.getKey()).merge(entry.getValue());
+                } else {
+                    this.templates.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            for (String oldTemplateName : oldTemplateNames) {
+                if (!newTemplates.containsKey(oldTemplateName)) {
+                    this.templates.remove(oldTemplateName);
+                }
+            }
+
+            log.debug("Reloaded {} templates", templates.size());
+
+            //TODO: Notify nodes about template changes
+        } catch (IOException e) {
+            log.error("Failed to load templates from directory: {}", templatesDir, e);
         }
     }
 
@@ -163,7 +234,10 @@ public class ServerManager {
 
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(typesDir, "*.yml")) {
                 for (Path file : stream) {
-                    loadServerType(file);
+                    ServerType type = loadServerType(file);
+                    types.put(type.name(), type);
+                    log.debug("Loaded server type: {}", type.name());
+
                 }
             }
 
@@ -173,7 +247,7 @@ public class ServerManager {
         }
     }
 
-    private void loadServerType(Path file) {
+    private ServerType loadServerType(Path file) {
         try {
             TypeConfig cfg = ConfigManager.create(TypeConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
@@ -197,13 +271,91 @@ public class ServerManager {
                     SharedUtils.convertYamlToJson(Files.readString(file, StandardCharsets.UTF_8))
             );
 
-            types.put(info.name(), serverType);
-            log.debug("Loaded server type: {}", info.name());
-
+            return serverType;
         } catch (IOException e) {
             log.error("Failed to read server type file: {}", file.getFileName(), e);
         } catch (Exception e) {
             log.error("Failed to parse server type file: {}", file.getFileName(), e);
+        }
+
+        return null;
+    }
+
+    /**
+     * Reloads server types from configuration files.
+     */
+    public void reloadServerTypes() {
+        Object2ObjectOpenHashMap<String, ServerType> newTypes = new Object2ObjectOpenHashMap<>();
+        Path typesDir = Directories.TYPES_DIR.toPath();
+
+        try {
+            Files.createDirectories(typesDir);
+
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(typesDir, "*.yml")) {
+                for (Path file : stream) {
+                    ServerType t = loadServerType(file);
+                    newTypes.put(t.name(), t);
+                    log.debug("Loaded type: {}", t.name());
+                }
+            }
+
+            //stop servers with no existing template anymore - if template is based on removed type, remove it too
+            for (Server server : servers.values()) {
+                if (!newTypes.containsKey(server.getType().name())) {
+                    log.info("Stopping server {} as its type no longer exists", server.getName());
+                    server.kill();
+
+                    //also remove template
+                    String templateName = server.getTemplate().getName();
+                    if (templates.containsKey(templateName)) {
+                        log.info("Removing template {} as its type no longer exists", templateName);
+                        templates.remove(templateName);
+                    }
+                }
+            }
+
+            Set<String> oldTypeNames = this.types.keySet();
+            Set<String> newTypeNames = newTypes.keySet();
+
+            Set<String> addedTypes = new HashSet<>(newTypeNames);
+            addedTypes.removeAll(oldTypeNames);
+            for (String added : addedTypes) {
+                log.info("Added type: {}", added);
+            }
+            Set<String> removedTypes = new HashSet<>(oldTypeNames);
+            removedTypes.removeAll(newTypeNames);
+            for (String removed : removedTypes) {
+                log.info("Removed types: {}", removed);
+            }
+            //updated types
+            Set<String> commonTypes = new HashSet<>(oldTypeNames);
+            commonTypes.retainAll(newTypeNames);
+            for (String common : commonTypes) {
+                if (!GSON.toJson(this.templates.get(common).getRaw())
+                        .equals(GSON.toJson(newTypes.get(common).raw()))) {
+                    log.info("Updated type: {}", common);
+                }
+            }
+
+            for (Map.Entry<String, ServerType> entry : newTypes.entrySet()) {
+                if (this.types.containsKey(entry.getKey())) {
+                    this.types.put(entry.getKey(), entry.getValue());
+                } else {
+                    this.types.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            for (String oldTypeName : oldTypeNames) {
+                if (!newTypes.containsKey(oldTypeName)) {
+                    this.types.remove(oldTypeName);
+                }
+            }
+
+            log.debug("Reloaded {} types", templates.size());
+
+            //TODO: Notify nodes about type changes
+        } catch (IOException e) {
+            log.error("Failed to load templates from directory: {}", typesDir, e);
         }
     }
 
@@ -256,7 +408,7 @@ public class ServerManager {
      * @param name the template name
      * @return the template, or null if not found
      */
-    public TemplateImpl getTemplate(String name) {
+    public Template getTemplate(String name) {
         if (name == null || name.isEmpty()) {
             return null;
         }
@@ -388,7 +540,7 @@ public class ServerManager {
      * @param template the template to filter by
      * @return array of matching servers
      */
-    public Server[] getServersByTemplate(TemplateImpl template) {
+    public Server[] getServersByTemplate(Template template) {
         if (template == null) {
             return new Server[0];
         }
@@ -421,7 +573,7 @@ public class ServerManager {
      * @param template the template to search for
      * @return array of best server results sorted by free slots
      */
-    public BestServerResult[] getBestServer(TemplateImpl template) {
+    public BestServerResult[] getBestServer(Template template) {
         if (template == null) {
             return new BestServerResult[0];
         }
@@ -482,7 +634,7 @@ public class ServerManager {
 
     public List<Template> getTemplatesForNode(String nodeId) {
         List<Template> templates = new ArrayList<>();
-        for (TemplateImpl template : this.templates.values()) {
+        for (Template template : this.templates.values()) {
             if (!template.getNodes().isEmpty() && template.getNodes().contains(nodeId)) {
                 templates.add(template);
             }
