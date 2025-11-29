@@ -35,6 +35,10 @@ message Payload {
 
     // Master → Node: responses to requests
     GenericResponse response = 30;
+
+    // Master → Node: updates
+    TempateChanges templateChanges = 40;
+    TypeChanges typeChanges = 41;
   }
 }
 
@@ -83,4 +87,12 @@ message ServerStatusChange {
   string token = 1;
   string server = 2;
   string status = 3;
+}
+
+message TempateChanges {
+  repeated string templates = 1;
+}
+
+message TypeChanges {
+  repeated string types = 1;
 }

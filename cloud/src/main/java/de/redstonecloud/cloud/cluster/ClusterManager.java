@@ -29,6 +29,10 @@ public class ClusterManager {
 
     }
 
+    public static boolean isCluster() {
+        return INSTANCE != null;
+    }
+
     public static ClusterManager getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new ClusterManager();
@@ -48,6 +52,10 @@ public class ClusterManager {
 
     public ClusterNode getNodeById(String id) {
         return idNodes.get(id);
+    }
+
+    public List<ClusterNode> getNodes() {
+        return new ArrayList<>(nodes);
     }
 
     public void startServer() {

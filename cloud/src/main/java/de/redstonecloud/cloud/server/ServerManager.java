@@ -2,9 +2,12 @@ package de.redstonecloud.cloud.server;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import de.redstonecloud.api.RCClusteringProto;
 import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.cloud.RedstoneCloud;
+import de.redstonecloud.cloud.cluster.ClusterManager;
+import de.redstonecloud.cloud.cluster.ClusterNode;
 import de.redstonecloud.cloud.config.entires.BridgeSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.events.defaults.ServerCreateEvent;
@@ -153,8 +156,8 @@ public class ServerManager {
     }
 
     /**
-    * Reloads templates, stops running servers if template does no longer exist
-    */
+     * Reloads templates, stops running servers if template does no longer exist
+     */
     public void reloadTemplates() {
         Object2ObjectOpenHashMap<String, Template> newTemplates = new Object2ObjectOpenHashMap<>();
         Path templatesDir = Directories.TEMPLATE_CONFIGS_DIR.toPath();
@@ -178,6 +181,8 @@ public class ServerManager {
                 }
             }
 
+            List<String> nodesToNotify = new ArrayList<>();
+
             Set<String> oldTemplateNames = this.templates.keySet();
             Set<String> newTemplateNames = newTemplates.keySet();
 
@@ -185,11 +190,19 @@ public class ServerManager {
             addedTemplates.removeAll(oldTemplateNames);
             for (String added : addedTemplates) {
                 log.info("Added template: {}", added);
+
+                if (newTemplates.get(added).getNodes() != null) {
+                    nodesToNotify.addAll(newTemplates.get(added).getNodes());
+                }
             }
             Set<String> removedTemplates = new HashSet<>(oldTemplateNames);
             removedTemplates.removeAll(newTemplateNames);
             for (String removed : removedTemplates) {
                 log.info("Removed template: {}", removed);
+
+                if (this.templates.get(removed).getNodes() != null) {
+                    nodesToNotify.addAll(this.templates.get(removed).getNodes());
+                }
             }
             //updated templates
             Set<String> commonTemplates = new HashSet<>(oldTemplateNames);
@@ -198,6 +211,10 @@ public class ServerManager {
                 if (!GSON.toJson(this.templates.get(common).getRaw())
                         .equals(GSON.toJson(newTemplates.get(common).getRaw()))) {
                     log.info("Updated template: {}", common);
+
+                    if (newTemplates.get(common).getNodes() != null) {
+                        nodesToNotify.addAll(newTemplates.get(common).getNodes());
+                    }
                 }
             }
 
@@ -217,7 +234,17 @@ public class ServerManager {
 
             log.debug("Reloaded {} templates", templates.size());
 
-            //TODO: Notify nodes about template changes
+            //notify nodes if there are
+            if (ClusterManager.isCluster()) {
+                for (String nodeId : nodesToNotify.stream().distinct().toList()) {
+                    ClusterManager.getInstance().getNodeById(nodeId).send(RCClusteringProto.Payload.newBuilder()
+                            .setTemplateChanges(RCClusteringProto.TempateChanges.newBuilder()
+                                    .addAllTemplates(newTemplates.values().stream().map(Template::getRaw).toList())
+                                    .build())
+                            .build());
+
+                }
+            }
         } catch (IOException e) {
             log.error("Failed to load templates from directory: {}", templatesDir, e);
         }
@@ -353,7 +380,16 @@ public class ServerManager {
 
             log.debug("Reloaded {} types", templates.size());
 
-            //TODO: Notify nodes about type changes
+            //notify nodes if there are
+            if (ClusterManager.isCluster()) {
+                for (ClusterNode node : ClusterManager.getInstance().getNodes()) {
+                    node.send(RCClusteringProto.Payload.newBuilder()
+                            .setTypeChanges(RCClusteringProto.TypeChanges.newBuilder()
+                                    .addAllTypes(newTypes.values().stream().map(ServerType::raw).toList())
+                                    .build())
+                            .build());
+                }
+            }
         } catch (IOException e) {
             log.error("Failed to load templates from directory: {}", typesDir, e);
         }
