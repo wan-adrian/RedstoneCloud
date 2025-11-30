@@ -3,6 +3,7 @@ package de.redstonecloud.cloud.cluster.grpc;
 import de.redstonecloud.api.RCClusteringProto;
 import de.redstonecloud.api.RCClusteringProto.*;
 import de.redstonecloud.api.RCClusteringServiceGrpc;
+import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.ClusterManager;
 import de.redstonecloud.cloud.server.ServerImpl;
@@ -60,8 +61,19 @@ public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringSe
 
                         log.info("Received SERVERPORTSET for server: {} with port {}", serverName, port);
                         server.setPort(port);
+                    }
 
+                    case SERVERSTATUSCHANGE -> {
+                        String serverName = msg.getServerStatusChange().getServer();
+                        ServerImpl server = (ServerImpl) ServerManager.getInstance().getServer(serverName);
+                        if (server == null) {
+                            log.warn("Received SERVERSTATUSCHANGE for unknown server: {}", serverName);
+                            return;
+                        }
 
+                        ServerStatus newStatus = ServerStatus.valueOf(msg.getServerStatusChange().getStatus());
+                        log.info("Received SERVERSTATUSCHANGE for server: {} to status {}", serverName, newStatus);
+                        server.setStatusLocally(newStatus);
                     }
 
                     default -> {}

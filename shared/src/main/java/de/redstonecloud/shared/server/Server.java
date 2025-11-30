@@ -115,6 +115,13 @@ public abstract class Server implements ICloudServer, Cacheable {
         sendStatusRemote(newStatus);
     }
 
+    public void setStatusLocally(ServerStatus newStatus) {
+        ServerStatus oldStatus = statusRef.getAndSet(newStatus);
+        if (oldStatus != newStatus) {
+            updateCache();
+        }
+    }
+
     public ServerStatus getStatus() {
         return statusRef.get();
     }
@@ -197,7 +204,7 @@ public abstract class Server implements ICloudServer, Cacheable {
         Path portConfigFile = serverDir.resolve(type.portSettingFile());
 
         if (!Files.exists(portConfigFile)) {
-            log.warn("Port configuration file not found: {}", portConfigFile);
+            log.warn("Port configuration file not found: {}", portConfigFile.toAbsolutePath());
             return;
         }
 
@@ -222,6 +229,8 @@ public abstract class Server implements ICloudServer, Cacheable {
     }
 
     private void saveLogs() {
+        if(!isLocal()) return;
+
         if (template.isStaticServer() || type.logsPath() == null) {
             return;
         }
@@ -244,6 +253,7 @@ public abstract class Server implements ICloudServer, Cacheable {
     }
 
     private void cleanupServerDirectory() {
+        if(!isLocal()) return;
         if (template.isStaticServer()) {
             return;
         }
@@ -314,7 +324,8 @@ public abstract class Server implements ICloudServer, Cacheable {
             return;
         }
 
-        startMethod.kill();
+        stop();
+        startMethod.kill(template.getShutdownTimeMs());
     }
 
     @Override
@@ -331,7 +342,7 @@ public abstract class Server implements ICloudServer, Cacheable {
             return;
         }
 
-        startMethod.writeCommand(type.stopCommand());
+        startMethod.stop(type.stopCommand());
         setStatus(ServerStatus.STOPPING);
     }
 

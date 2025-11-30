@@ -9,4 +9,7 @@ public class RCMaster {
     public static void port(String serverName, int port) {
         ClusterClient.getInstance().sendServerPort(serverName, port);
     }
+    public static void statusChange(String serverName, String status) {
+        ClusterClient.getInstance().sendStatus(serverName, status);
+    }
 }

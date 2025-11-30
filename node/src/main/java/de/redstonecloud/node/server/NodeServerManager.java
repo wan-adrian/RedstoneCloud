@@ -20,7 +20,6 @@ import eu.okaeri.configs.ConfigManager;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -37,12 +36,12 @@ import java.util.stream.Collectors;
  */
 @Getter
 @Log4j2
-public class ServerManager {
+public class NodeServerManager {
     private static final Gson GSON = new Gson();
     private static final int MIN_PORT = 10000;
     private static final int MAX_PORT = 50000;
 
-    private static volatile ServerManager INSTANCE;
+    private static volatile NodeServerManager INSTANCE;
 
     private final Object2ObjectOpenHashMap<String, ServerType> types = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<String, Template> templates = new Object2ObjectOpenHashMap<>();
@@ -54,18 +53,18 @@ public class ServerManager {
      *
      * @return the ServerManager instance
      */
-    public static ServerManager getInstance() {
+    public static NodeServerManager getInstance() {
         if (INSTANCE == null) {
-            synchronized (ServerManager.class) {
+            synchronized (NodeServerManager.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new ServerManager();
+                    INSTANCE = new NodeServerManager();
                 }
             }
         }
         return INSTANCE;
     }
 
-    private ServerManager() {
+    private NodeServerManager() {
         log.debug("Initializing ServerManager");
     }
 
@@ -78,9 +77,6 @@ public class ServerManager {
             //save to temp file
             Path file = Directories.TMP_STORAGE_DIR.toPath().resolve(randomFileName).toAbsolutePath();
             Files.writeString(file, data, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-
-            System.out.println("YAML CONTENT:");
-            System.out.println(Files.readString(file));
 
             TemplateConfig cfg = ConfigManager.create(TemplateConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
@@ -106,7 +102,7 @@ public class ServerManager {
                 nodes.add(info.node());
             }
 
-            TemplateImpl template = TemplateImpl.builder()
+            NodeTemplateImpl template = NodeTemplateImpl.builder()
                     .name(info.name())
                     .type(type)
                     .maxPlayers(behavior.maxPlayers())
@@ -213,9 +209,6 @@ public class ServerManager {
             Directories.TMP_STORAGE_DIR.mkdirs();
             Path file = Directories.TMP_STORAGE_DIR.toPath().resolve(randomFileName).toAbsolutePath();
             Files.writeString(file, data, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-
-            System.out.println("YAML CONTENT:");
-            System.out.println(Files.readString(file));
 
             TypeConfig cfg = ConfigManager.create(TypeConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
@@ -384,7 +377,7 @@ public class ServerManager {
             return;
         }
 
-        ServerImpl server = ServerImpl.builder()
+        NodeServerImpl server = NodeServerImpl.builder()
                 .template(temp)
                 .uuid(UUID.randomUUID())
                 .createdAt(System.currentTimeMillis())
@@ -402,6 +395,16 @@ public class ServerManager {
         log.info("Server {} prepared successfully from template {}", server.getName(), temp.getName());
 
         RCMaster.port(server.getName(), server.getPort());
+    }
+
+    public void start(Server server) {
+        if (server == null) {
+            log.error("Cannot start server: server is null");
+            return;
+        }
+
+        server.start();
+        log.info("Server {} started successfully", server.getName());
     }
 
 
@@ -614,7 +617,7 @@ public class ServerManager {
      * @param template the template to calculate for
      * @return total number of free slots
      */
-    public int getTemplateFreeSlots(TemplateImpl template) {
+    public int getTemplateFreeSlots(NodeTemplateImpl template) {
         if (template == null) {
             return 0;
         }

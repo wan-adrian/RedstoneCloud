@@ -1,5 +1,6 @@
 package de.redstonecloud.shared.startmethods.impl.subprocess;
 
+import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.shared.startmethods.IStartMethod;
 import de.redstonecloud.shared.startmethods.impl.subprocess.reader.ServerOutReader;
 import lombok.Getter;
@@ -11,6 +12,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 @Log4j2
 @Getter
@@ -75,8 +78,8 @@ public class Subprocess implements IStartMethod {
     }
 
     @Override
-    public void stop() {
-
+    public void stop(String stopCommand) {
+        writeCommand(stopCommand);
     }
 
     @Override
@@ -86,7 +89,7 @@ public class Subprocess implements IStartMethod {
 
     @Override
     public String getDirectory() {
-        return "";
+        return directory;
     }
 
     @Override
@@ -114,9 +117,19 @@ public class Subprocess implements IStartMethod {
     }
 
     @Override
-    public void kill() {
-        this.stop();
+    public void kill(int timeout) {
+        Timer timer = new Timer();
 
-        //TODO: kill after 5 seconds if not already stopped
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (process != null && process.isAlive()) {
+                    process.destroyForcibly();
+                        log.warn("Server did not stop gracefully, forcibly terminated");
+                }
+
+                timer.cancel();
+            }
+        }, timeout);
     }
 }

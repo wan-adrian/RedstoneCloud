@@ -5,11 +5,10 @@ import de.redstonecloud.api.RCBootProto.Status;
 import de.redstonecloud.api.RCBootServiceGrpc;
 import de.redstonecloud.api.RCClusteringProto.*;
 
-import de.redstonecloud.node.cluster.grpc.RCMaster;
 import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.config.entry.MasterEntry;
 
-import de.redstonecloud.node.server.ServerManager;
+import de.redstonecloud.node.server.NodeServerManager;
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -100,8 +99,8 @@ public class ClusterClient {
             this.token = res.getToken();
             this.loggedIn = true;
 
-            ServerManager.getInstance().reloadServerTypes(res.getTypesList().stream().map(t -> t.getConfig()).toList());
-            ServerManager.getInstance().reloadTemplates(res.getTemplatesList().stream().map(t -> t.getData()).toList());
+            NodeServerManager.getInstance().reloadServerTypes(res.getTypesList().stream().map(t -> t.getConfig()).toList());
+            NodeServerManager.getInstance().reloadTemplates(res.getTemplatesList().stream().map(t -> t.getData()).toList());
 
             log.info("Logged into master successfully. Token={}", token);
 

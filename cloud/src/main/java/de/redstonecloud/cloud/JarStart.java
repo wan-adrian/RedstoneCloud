@@ -12,9 +12,11 @@ import de.redstonecloud.cloud.utils.Translator;
 import de.redstonecloud.cloud.utils.Utils;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
 import de.redstonecloud.shared.utils.Directories;
+import de.redstonecloud.shared.utils.SharedUtils;
 import eu.okaeri.configs.ConfigManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter;
 
 import java.io.File;
 
@@ -44,6 +46,8 @@ public class JarStart {
         });
 
         Thread.sleep(2000);
+
+        if(RedstoneCloud.config.debug()) SharedUtils.enableDebug();
 
         RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
         System.setProperty(Keys.PROPERTY_REDIS_PORT, String.valueOf(redisCfg.port()));

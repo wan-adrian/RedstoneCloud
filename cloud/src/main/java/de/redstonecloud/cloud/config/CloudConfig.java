@@ -22,4 +22,7 @@ public final class CloudConfig extends OkaeriConfig {
 
     @Comment("Cluster settings")
     private ClusterSettings cluster = new ClusterSettings();
+
+    @Comment("Enable or disable debug logging")
+    private boolean debug = false;
 }

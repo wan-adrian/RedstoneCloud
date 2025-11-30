@@ -2,10 +2,16 @@ package de.redstonecloud.shared.utils;
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 public class SharedUtils {
+    public static void enableDebug() {
+        Configurator.setAllLevels(LogManager.ROOT_LOGGER_NAME, org.apache.logging.log4j.Level.DEBUG);
+    }
+
     public static String[] dropFirstString(String[] input) {
         String[] anstring = new String[input.length - 1];
         System.arraycopy(input, 1, anstring, 0, input.length - 1);

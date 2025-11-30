@@ -2,7 +2,9 @@ package de.redstonecloud.node.cluster;
 
 import de.redstonecloud.api.RCClusteringProto;
 import de.redstonecloud.api.RCGenericProto;
-import de.redstonecloud.node.server.ServerManager;
+import de.redstonecloud.api.components.ServerStatus;
+import de.redstonecloud.node.server.NodeServerManager;
+import de.redstonecloud.shared.server.Server;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,17 +17,29 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
         switch (msg.getPayloadCase()) {
 
             case PREPARESERVER -> {
-                log.info("Master → prepareServer {}", msg.getPrepareServer().getName());
-                ServerManager.getInstance().prepareServer(msg.getPrepareServer().getTemplate(), msg.getPrepareServer().getName());
+                log.info("Preparing server {} from template {}",
+                        msg.getPrepareServer().getName(),
+                        msg.getPrepareServer().getTemplate());
+                NodeServerManager.getInstance().prepareServer(msg.getPrepareServer().getTemplate(), msg.getPrepareServer().getName());
             }
 
             case STARTSERVER -> {
-                log.info("Master → startServer {}", msg.getStartServer().getServer());
+                log.info("Starting server {}", msg.getStartServer().getServer());
+                NodeServerManager.getInstance().start(NodeServerManager.getInstance().getServer(msg.getStartServer().getServer()));
             }
 
             case STOPSERVER -> {
-                log.info("Master → stopServer {}", msg.getStopServer().getServer());
+                boolean kill = msg.getStopServer().getKill();
+                log.info("Stopping server {} (kill={})", msg.getStopServer().getServer(), kill);
+                Server server = NodeServerManager.getInstance().getServer(msg.getStopServer().getServer());
+                if(server == null) return;
+
+                if(kill)
+                    server.kill();
+                else
+                    server.stop();
             }
+
 
             case EXECUTECOMMAND -> {
                 log.info("Master → command {}", msg.getExecuteCommand().getCommand());
@@ -36,21 +50,24 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
             }
 
             case SERVERSTATUSCHANGE -> {
-                log.info("Master → serverStatusChange {}: {}",
-                        msg.getServerStatusChange().getServer(),
-                        msg.getServerStatusChange().getStatus());
+                String serverName = msg.getServerStatusChange().getServer();
+                String status = msg.getServerStatusChange().getStatus();
+                log.info("{} changed status to {}", serverName, status);
+                Server server = NodeServerManager.getInstance().getServer(serverName);
+                if(server == null) return;
+                server.setStatusLocally(ServerStatus.valueOf(status));
             }
 
             case TYPECHANGES -> {
                 log.info("Master → typeChanges");
-                ServerManager.getInstance().reloadServerTypes(
+                NodeServerManager.getInstance().reloadServerTypes(
                         msg.getTypeChanges().getTypesList().stream().map(RCGenericProto.Type::getConfig).toList()
                 );
             }
 
             case TEMPLATECHANGES -> {
                 log.info("Master → templateChanges");
-                ServerManager.getInstance().reloadTemplates(
+                NodeServerManager.getInstance().reloadTemplates(
                         msg.getTemplateChanges().getTemplatesList().stream().map(RCGenericProto.Template::getData).toList()
                 );
             }

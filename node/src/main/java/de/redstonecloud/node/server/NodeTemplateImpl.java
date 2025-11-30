@@ -5,7 +5,7 @@ import de.redstonecloud.shared.server.Template;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
-public class TemplateImpl extends Template {
+public class NodeTemplateImpl extends Template {
     @Override
     protected Server[] getServers() {
         return null;

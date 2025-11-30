@@ -11,8 +11,8 @@ public interface IStartMethod {
     void setOnExit(Runnable onExit);
     void start();
     void prepare(String sourceDir, String[] command, Map<String, String> env);
-    void stop();
-    void kill();
+    void stop(String stopCommand);
+    void kill(int timeout);
     void cleanup();
     String getDirectory();
     void writeCommand(String command);

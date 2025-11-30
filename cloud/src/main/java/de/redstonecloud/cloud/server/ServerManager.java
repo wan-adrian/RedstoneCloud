@@ -525,16 +525,24 @@ public class ServerManager {
         }
 
         server.prepare();
+        //wait for server.getStatus() to be PREPARED, then start
         add(server);
+        while (server.getStatus() != ServerStatus.PREPARED) {
+            try {
+                Thread.sleep(100);
+                log.info("Waiting for server {} to prepare... {}", server.getName(), server.getStatus().name());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Interrupted while waiting for server to prepare", e);
+            }
+        }
+
         template.setRunningServers(template.getRunningServers() + 1);
 
-        // Schedule server start
-        RedstoneCloud.getInstance().getScheduler().scheduleDelayedTask(() -> {
-            server.start();
-            RedstoneCloud.getInstance()
-                    .getEventManager()
-                    .callEvent(new ServerStartEvent(server));
-        }, TimeUnit.SECONDS, 1);
+        server.start();
+        RedstoneCloud.getInstance()
+                .getEventManager()
+                .callEvent(new ServerStartEvent(server));
 
         log.info("Server {} created and scheduled to start", server.getName());
         return server;
