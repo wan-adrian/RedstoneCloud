@@ -495,6 +495,8 @@ public class ServerManager {
             return null;
         }
 
+        clusterNode = ClusterManager.isCluster() && !node.isEmpty() ? ClusterManager.getInstance().getNodeById(node) : null;
+
         RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
         BridgeSettings bridgeSettings = RedstoneCloud.getConfig().bridge();
 

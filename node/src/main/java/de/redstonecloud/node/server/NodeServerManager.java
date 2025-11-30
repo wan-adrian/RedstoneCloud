@@ -2,6 +2,7 @@ package de.redstonecloud.node.server;
 
 import com.google.gson.Gson;
 import de.redstonecloud.api.components.ServerStatus;
+import de.redstonecloud.node.RedstoneNode;
 import de.redstonecloud.node.cluster.grpc.RCMaster;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
 import de.redstonecloud.shared.files.TemplateConfig;
@@ -386,6 +387,7 @@ public class NodeServerManager {
                 .nodeId("") // Node ID can be set later if needed
                 .env(env) // Environment variables can be set later if needed
                 .selectedMethod(StartMethods.SUBPROCESS)
+                .address(RedstoneNode.getConfig().node().address())
                 .build();
 
         server.setName(name);

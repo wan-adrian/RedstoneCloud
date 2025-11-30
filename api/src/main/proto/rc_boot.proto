@@ -19,7 +19,6 @@ message AuthRequest {
 message LoginResponse {
   Status status = 1;
   string message = 2;
-  string config = 3;
   string token = 4;
   repeated Type types = 5;
   repeated Template templates = 6;

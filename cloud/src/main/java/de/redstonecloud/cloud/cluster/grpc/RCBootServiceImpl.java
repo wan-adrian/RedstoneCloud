@@ -49,7 +49,6 @@ public class RCBootServiceImpl extends RCBootServiceGrpc.RCBootServiceImplBase {
 
         RCBootProto.LoginResponse response = RCBootProto.LoginResponse.newBuilder()
                 .setStatus(RCBootProto.Status.SUCCESS)
-                .setConfig("default-config") //TODO: Change to actual config
                 .setToken(token)
                 .addAllTypes(types)
                 .addAllTemplates(templates)

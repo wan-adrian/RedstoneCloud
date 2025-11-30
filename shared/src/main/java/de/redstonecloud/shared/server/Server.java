@@ -186,14 +186,11 @@ public abstract class Server implements ICloudServer, Cacheable {
             Path serverDir = Path.of(basePath, name);
 
             startMethod.setDirectory(serverDir.toString());
-            log.info("Preparing server directory at {}", serverDir);
             Path templatePath = Path.of(Directories.TEMPLATES_DIR.getAbsolutePath(), template.getName());
 
             startMethod.prepare(templatePath.toString(), type.startCommand(), env);
-
             configureServerPort(Path.of(startMethod.getDirectory()));
             setStatus(ServerStatus.PREPARED);
-            log.info("Server {} prepared successfully", name);
         } catch (Exception e) {
             log.error("Failed to prepare server {}", name, e);
             throw new RuntimeException("Server preparation failed", e);
@@ -201,17 +198,22 @@ public abstract class Server implements ICloudServer, Cacheable {
     }
 
     private void configureServerPort(Path serverDir) throws IOException {
-        startMethod.setPort(port);
-        Path portConfigFile = serverDir.resolve(type.portSettingFile());
+        try {
+            startMethod.setPort(port);
+            Path portConfigFile = serverDir.resolve(type.portSettingFile());
 
-        if (!Files.exists(portConfigFile)) {
-            log.warn("Port configuration file not found: {}", portConfigFile.toAbsolutePath());
-            return;
+            if (!Files.exists(portConfigFile)) {
+                log.warn("Port configuration file not found: {}", portConfigFile.toAbsolutePath());
+                return;
+            }
+
+            String content = Files.readString(portConfigFile, StandardCharsets.UTF_8);
+            content = content.replace(type.portSettingPlaceholder(), String.valueOf(port));
+            Files.writeString(portConfigFile, content, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Error configuring port for server {}: {}", name, e.getMessage());
+            throw e;
         }
-
-        String content = Files.readString(portConfigFile, StandardCharsets.UTF_8);
-        content = content.replace(type.portSettingPlaceholder(), String.valueOf(port));
-        Files.writeString(portConfigFile, content, StandardCharsets.UTF_8);
     }
 
     /**
