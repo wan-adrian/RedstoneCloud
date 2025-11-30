@@ -32,7 +32,7 @@ public class RCBootServiceImpl extends RCBootServiceGrpc.RCBootServiceImplBase {
             token = "session-" + request.getNodeId() + "-" + System.currentTimeMillis();
 
             //TODO: add name
-            clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, null));
+            clusterManager.addNode(new ClusterNode("Name", request.getNodeId(), token, null, false, request.getHostname()));
         }
 
         List<RCGenericProto.Type> types = RedstoneCloud.getInstance().getServerManager().getTypes().clone().values().stream().map(type -> RCGenericProto.Type.newBuilder()

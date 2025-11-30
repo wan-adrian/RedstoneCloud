@@ -3,10 +3,7 @@ package de.redstonecloud.cloud.cluster;
 import de.redstonecloud.api.RCClusteringProto;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +15,9 @@ public class ClusterNode {
     private String name;
     private String id;
     private String token;
-    @Setter
-    private StreamObserver<RCClusteringProto.Payload> stream;
+    @Setter private StreamObserver<RCClusteringProto.Payload> stream;
+    @Setter private boolean shuttingDown;
+    @Setter private String address;
 
     public void send(RCClusteringProto.Payload envelope) {
         if (stream == null) {

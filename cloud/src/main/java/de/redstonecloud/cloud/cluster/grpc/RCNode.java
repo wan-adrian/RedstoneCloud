@@ -1,8 +1,12 @@
 package de.redstonecloud.cloud.cluster.grpc;
 
 import de.redstonecloud.api.RCClusteringProto;
+import de.redstonecloud.api.RCGenericProto;
 import de.redstonecloud.cloud.cluster.ClusterManager;
 import lombok.Getter;
+
+import java.util.List;
+import java.util.Map;
 
 @Getter
 public class RCNode {
@@ -12,11 +16,19 @@ public class RCNode {
         this.nodeId = nodeId;
     }
 
-    public void prepareServer(String template, String name) {
+    public void prepareServer(String template, String name, Map<String, String> env) {
+        List<RCGenericProto.KeyValuePair> envList = env.entrySet().stream()
+                .map(entry -> RCGenericProto.KeyValuePair.newBuilder()
+                        .setKey(entry.getKey())
+                        .setValue(entry.getValue())
+                        .build())
+                .toList();
+
         ClusterManager.getInstance().getNodeById(nodeId).send(RCClusteringProto.Payload.newBuilder()
                         .setPrepareServer(RCClusteringProto.PrepareServer.newBuilder()
                                 .setTemplate(template)
                                 .setName(name)
+                                .addAllEnv(envList)
                                 .build())
                 .build());
     }

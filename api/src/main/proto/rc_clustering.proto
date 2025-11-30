@@ -20,26 +20,23 @@ service RCClusteringService {
 */
 message Payload {
   oneof payload {
-    // Node → Master: registration (required)
     RegisterNode registerNode = 1;
 
-    // Node → Master: commands
     PrepareServer prepareServer = 2;
     StartServer startServer = 3;
     StopServer stopServer = 4;
     ExecuteCommand executeCommand = 5;
 
-    // Master → Node: events
     ServerDied serverDied = 20;
     ServerStatusChange serverStatusChange = 21;
     ServerPortSet serverPortSet = 22;
 
-    // Master → Node: responses to requests
     GenericResponse response = 30;
 
-    // Master → Node: updates
     TempateChanges templateChanges = 40;
     TypeChanges typeChanges = 41;
+
+    NodeShutdown nodeShutdown = 50;
   }
 }
 
@@ -56,6 +53,7 @@ message PrepareServer {
   string token = 1;
   string template = 2;
   string name = 3;
+  repeated KeyValuePair env = 4;
 }
 
 message StartServer {
@@ -103,3 +101,5 @@ message TempateChanges {
 message TypeChanges {
   repeated Type types = 1;
 }
+
+message NodeShutdown {}

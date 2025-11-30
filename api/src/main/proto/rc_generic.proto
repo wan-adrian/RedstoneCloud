@@ -21,3 +21,8 @@ message Type {
   string name = 1;
   string config = 2;
 }
+
+message KeyValuePair {
+  string key = 1;
+  string value = 2;
+}

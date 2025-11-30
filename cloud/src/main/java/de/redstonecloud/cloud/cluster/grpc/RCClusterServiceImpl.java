@@ -6,6 +6,7 @@ import de.redstonecloud.api.RCClusteringServiceGrpc;
 import de.redstonecloud.api.components.ServerStatus;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.ClusterManager;
+import de.redstonecloud.cloud.cluster.ClusterNode;
 import de.redstonecloud.cloud.server.ServerImpl;
 import de.redstonecloud.cloud.server.ServerManager;
 import de.redstonecloud.shared.server.Server;
@@ -17,8 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringServiceImplBase {
-
-    private final Map<String, StreamObserver<RCClusteringProto.Payload>> nodes = new ConcurrentHashMap<>();
 
     @Override
     public StreamObserver<Payload> communicate(StreamObserver<Payload> outbound) {
@@ -32,10 +31,12 @@ public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringSe
 
                     case REGISTERNODE -> {
                         nodeId = msg.getRegisterNode().getNodeId();
-                        nodes.put(nodeId, outbound);
-                        ClusterManager.getInstance().getNodeById(nodeId).setStream(outbound);
+                        ClusterNode node = ClusterManager.getInstance().getNodeById(nodeId);
+                        node.setStream(outbound);
+                        node.setShuttingDown(false);
 
                         log.info("Node connected: {} ({})", ClusterManager.getInstance().getNodeNameById(nodeId), nodeId);
+
                     }
 
                     case SERVERDIED -> {
@@ -76,45 +77,36 @@ public class RCClusterServiceImpl extends RCClusteringServiceGrpc.RCClusteringSe
                         server.setStatusLocally(newStatus);
                     }
 
+                    case NODESHUTDOWN -> {
+                        ClusterNode node = ClusterManager.getInstance().getNodeById(nodeId);
+                        String name = ClusterManager.getInstance().getNodeNameById(nodeId);
+                        log.info("Cluster {} is shutting down.", name);
+
+                        node.setShuttingDown(true);
+                    }
+
                     default -> {}
                 }
             }
 
             @Override
             public void onError(Throwable t) {
-                disconnect();
+                log.warn("Cluster node connection error: {}", t.getMessage());
             }
 
             @Override
             public void onCompleted() {
-                disconnect();
+
             }
 
             private void disconnect() {
-                //TODO: Check if this fixes node disconnection issues after sending 1 message
-                /*if (nodeId != null) {
-                    nodes.remove(nodeId);
-                    System.out.println("Node disconnected: " + nodeId);
+                if (nodeId != null) {
+                    ClusterManager.getInstance().cleanupNode(nodeId);
+                    log.info("Node disconnected: {} ({})", ClusterManager.getInstance().getNodeNameById(nodeId), nodeId);
+                    //complete the stream
+                    outbound.onCompleted();
                 }
-                try { outbound.onCompleted(); } catch (Exception ignore) {}*/
             }
         };
-    }
-
-    /* ================================================================
-       Sending messages TO specific nodes
-       ================================================================ */
-
-    public boolean sendToNode(String nodeId, Payload env) {
-        StreamObserver<Payload> node = nodes.get(nodeId);
-        if (node == null) return false;
-
-        try {
-            node.onNext(env);
-            return true;
-        } catch (Exception e) {
-            nodes.remove(nodeId);
-            return false;
-        }
     }
 }

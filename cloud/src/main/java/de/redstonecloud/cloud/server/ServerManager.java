@@ -489,16 +489,23 @@ public class ServerManager {
 
         String node = template.getNodes() != null && !template.getNodes().isEmpty() ? template.getNodes().getFirst() : "";
 
+        ClusterNode clusterNode = null;
+        if(!node.isEmpty() && ClusterManager.isCluster() && ((clusterNode = ClusterManager.getInstance().getNodeById(node)) == null || clusterNode.getStream() == null || clusterNode.isShuttingDown())) {
+            log.error("Cannot start server: specified node '{}' is not available", node);
+            return null;
+        }
+
         RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
         BridgeSettings bridgeSettings = RedstoneCloud.getConfig().bridge();
 
         JsonObject bridgeJson = new JsonObject();
 
-        bridgeJson.addProperty("hub_tempalte", bridgeSettings.hubTemplate());
+        bridgeJson.addProperty("hub_template", bridgeSettings.hubTemplate());
         bridgeJson.addProperty("hubcommand_desc", bridgeSettings.hubDescription());
         bridgeJson.addProperty("hubcommand_no_hub_available", bridgeSettings.hubNotAvailable());
 
         ServerImpl server = ServerImpl.builder()
+                .address(clusterNode != null ? clusterNode.getAddress() : "127.0.0.1")
                 .template(template)
                 .uuid(UUID.randomUUID())
                 .createdAt(System.currentTimeMillis())
@@ -527,10 +534,10 @@ public class ServerManager {
         server.prepare();
         //wait for server.getStatus() to be PREPARED, then start
         add(server);
+        //TODO: This might be in an extra thread later to not block the main thread
         while (server.getStatus() != ServerStatus.PREPARED) {
             try {
                 Thread.sleep(100);
-                log.info("Waiting for server {} to prepare... {}", server.getName(), server.getStatus().name());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.error("Interrupted while waiting for server to prepare", e);
@@ -573,6 +580,8 @@ public class ServerManager {
         List<CompletableFuture<Void>> stopFutures = serverList.stream()
                 .map(server -> CompletableFuture.runAsync(() -> server.kill()))
                 .collect(Collectors.toList());
+
+        while(!servers.isEmpty()) {}
 
         try {
             // Wait for all servers to stop

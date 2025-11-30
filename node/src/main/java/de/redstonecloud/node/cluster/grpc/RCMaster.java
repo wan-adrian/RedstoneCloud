@@ -12,4 +12,7 @@ public class RCMaster {
     public static void statusChange(String serverName, String status) {
         ClusterClient.getInstance().sendStatus(serverName, status);
     }
+    public static void shutdownNode() {
+        ClusterClient.getInstance().sendShutdownNode();
+    }
 }

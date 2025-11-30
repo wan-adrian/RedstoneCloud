@@ -8,6 +8,8 @@ import de.redstonecloud.shared.server.Server;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Map;
+
 @Slf4j
 public class InboundHandler implements StreamObserver<RCClusteringProto.Payload> {
 
@@ -20,7 +22,16 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
                 log.info("Preparing server {} from template {}",
                         msg.getPrepareServer().getName(),
                         msg.getPrepareServer().getTemplate());
-                NodeServerManager.getInstance().prepareServer(msg.getPrepareServer().getTemplate(), msg.getPrepareServer().getName());
+
+                Map<String, String> env = msg.getPrepareServer().getEnvList().stream()
+                        .collect(
+                                java.util.stream.Collectors.toMap(
+                                        RCGenericProto.KeyValuePair::getKey,
+                                        RCGenericProto.KeyValuePair::getValue
+                                )
+                        );
+
+                NodeServerManager.getInstance().prepareServer(msg.getPrepareServer().getTemplate(), msg.getPrepareServer().getName(), env);
             }
 
             case STARTSERVER -> {
@@ -79,7 +90,6 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
     @Override
     public void onError(Throwable t) {
         log.error("Stream error: {}", t.getMessage());
-        ClusterClient.getInstance().setStreamActive(false);
     }
 
     @Override

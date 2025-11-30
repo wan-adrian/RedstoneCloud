@@ -5,9 +5,8 @@ import de.redstonecloud.api.RCBootProto.Status;
 import de.redstonecloud.api.RCBootServiceGrpc;
 import de.redstonecloud.api.RCClusteringProto.*;
 
-import de.redstonecloud.node.config.NodeConfig;
-import de.redstonecloud.node.config.entry.MasterEntry;
-
+import de.redstonecloud.node.RedstoneNode;
+import de.redstonecloud.node.config.entires.MasterSettings;
 import de.redstonecloud.node.server.NodeServerManager;
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannel;
@@ -25,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class ClusterClient {
     private static ClusterClient INSTANCE;
 
-    private final MasterEntry masterEntry;
+    private final MasterSettings masterEntry;
     private ManagedChannel channel;
 
     private StreamObserver<RCClusteringProto.Payload> outbound;   // Master → Node stream
@@ -42,7 +41,7 @@ public class ClusterClient {
     }
 
     private ClusterClient() {
-        this.masterEntry = NodeConfig.getMasterSettings();
+        this.masterEntry = RedstoneNode.getConfig().master();
     }
 
     /* ====================================================================
@@ -66,6 +65,9 @@ public class ClusterClient {
 
             channel = ManagedChannelBuilder
                     .forAddress(masterEntry.ip(), masterEntry.port())
+                    .keepAliveWithoutCalls(true)
+                    .keepAliveTime(10, TimeUnit.SECONDS)
+                    .keepAliveTimeout(3, TimeUnit.SECONDS)
                     .usePlaintext()
                     .build();
 
@@ -84,8 +86,8 @@ public class ClusterClient {
                     RCBootServiceGrpc.newBlockingStub(channel);
 
             RCBootProto.AuthRequest req = RCBootProto.AuthRequest.newBuilder()
-                    .setNodeId(NodeConfig.getNodeId())
-                    .setHostname(NodeConfig.getHost())
+                    .setNodeId(RedstoneNode.getConfig().node().id())
+                    .setHostname(RedstoneNode.getConfig().node().address())
                     .build();
 
             RCBootProto.LoginResponse res = stub.login(req);
@@ -124,7 +126,7 @@ public class ClusterClient {
                 RCClusteringProto.Payload.newBuilder()
                         .setRegisterNode(
                                 RCClusteringProto.RegisterNode.newBuilder()
-                                        .setNodeId(NodeConfig.getNodeId())
+                                        .setNodeId(RedstoneNode.getConfig().node().id())
                                         .setToken(token)
                         )
                         .build()
@@ -236,6 +238,18 @@ public class ClusterClient {
                                         .setToken(token)
                                         .setServer(server)
                                         .setStatus(status)
+                        )
+                        .build()
+        );
+    }
+
+    public void sendShutdownNode() {
+        if (!streamActive) return;
+
+        outbound.onNext(
+                Payload.newBuilder()
+                        .setNodeShutdown(
+                                NodeShutdown.newBuilder().build()
                         )
                         .build()
         );

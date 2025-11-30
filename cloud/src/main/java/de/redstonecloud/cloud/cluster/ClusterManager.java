@@ -7,6 +7,7 @@ import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entires.ClusterSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.config.types.Node;
+import de.redstonecloud.cloud.server.ServerManager;
 import lombok.Getter;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Log4j2
 @Getter
@@ -67,6 +69,10 @@ public class ClusterManager {
         ClusterSettings clusterSettings = RedstoneCloud.getConfig().cluster();
         try {
             server = ServerBuilder.forPort(clusterSettings.port())
+                    .permitKeepAliveWithoutCalls(true)
+                    .permitKeepAliveTime(10, TimeUnit.SECONDS)
+                    .keepAliveTime(20, TimeUnit.SECONDS)
+                    .keepAliveTimeout(10, TimeUnit.SECONDS)
                     .addService(new RCBootServiceImpl())
                     .addService(new RCClusterServiceImpl())
                     //.intercept(new TokenCheck("TOKEN HERE"))
@@ -96,5 +102,16 @@ public class ClusterManager {
 
     public String getNodeNameById(String id) {
         return idNameMap.get(id);
+    }
+
+    public void cleanupNode(String nodeId) {
+        ClusterNode node = idNodes.get(nodeId);
+        if (node != null) {
+            nodes.remove(node);
+            tokenNodes.remove(node.getToken());
+            idNodes.remove(nodeId);
+
+            log.info("Cleaned up node {}", nodeId);
+        }
     }
 }

@@ -370,7 +370,7 @@ public class NodeServerManager {
 
 
 
-    public void prepareServer(String template, String name) {
+    public void prepareServer(String template, String name, Map<String, String> env) {
         Template temp = getTemplate(template);
         if (temp == null) {
             log.error("Cannot prepare server: template {} not found", template);
@@ -384,7 +384,7 @@ public class NodeServerManager {
                 .type(temp.getType())
                 .port(generateRandomPort())
                 .nodeId("") // Node ID can be set later if needed
-                .env(new HashMap<>()) // Environment variables can be set later if needed
+                .env(env) // Environment variables can be set later if needed
                 .selectedMethod(StartMethods.SUBPROCESS)
                 .build();
 
@@ -535,6 +535,8 @@ public class NodeServerManager {
         List<CompletableFuture<Void>> stopFutures = serverList.stream()
                 .map(server -> CompletableFuture.runAsync(() -> server.kill()))
                 .collect(Collectors.toList());
+
+        while(!servers.isEmpty()) {}
 
         try {
             // Wait for all servers to stop

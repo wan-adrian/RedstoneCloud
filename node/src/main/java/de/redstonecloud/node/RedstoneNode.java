@@ -1,9 +1,11 @@
 package de.redstonecloud.node;
 
 import de.redstonecloud.node.cluster.ClusterClient;
+import de.redstonecloud.node.cluster.grpc.RCMaster;
 import de.redstonecloud.node.commands.defaults.EndCommand;
 import de.redstonecloud.node.commands.defaults.InfoCommand;
 import de.redstonecloud.node.commands.defaults.ListCommand;
+import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.server.NodeServerManager;
 import de.redstonecloud.shared.commands.CommandManager;
 import de.redstonecloud.shared.console.Console;
@@ -24,6 +26,7 @@ public class RedstoneNode {
     private CommandManager commandManager;
 
     @Getter protected static String workingDir;
+    @Getter protected static NodeConfig config;
     @Getter private static RedstoneNode instance;
 
     protected RedstoneNode() {
@@ -50,6 +53,7 @@ public class RedstoneNode {
     }
 
     public void shutdown() {
+        RCMaster.shutdownNode();
         this.serverManager.stopAll();
         this.clusterClient.shutdown();
         //remove tmp files
@@ -57,5 +61,7 @@ public class RedstoneNode {
             FileUtils.deleteDirectory(Directories.TMP_STORAGE_DIR);
         } catch (Exception ignored) {
         }
+
+        System.exit(0);
     }
 }

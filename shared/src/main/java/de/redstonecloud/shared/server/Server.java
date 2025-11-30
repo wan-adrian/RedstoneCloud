@@ -94,7 +94,8 @@ public abstract class Server implements ICloudServer, Cacheable {
                 type.isProxy(),
                 GSON.fromJson(GSON.toJson(players), JsonArray.class),
                 new JsonObject(),
-                nodeId
+                nodeId,
+                address
         ).toJson();
 
         return obj.toString();
@@ -279,12 +280,13 @@ public abstract class Server implements ICloudServer, Cacheable {
         }
 
         log.info("Starting {}", name);
-        setStatus(ServerStatus.STARTING);
 
         if (!isLocal()) {
             startRemote();
             return;
         }
+
+        setStatus(ServerStatus.STARTING);
 
         try {
             startMethod.setOnExit(this::onExit);

@@ -14,6 +14,7 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
+import java.util.Map;
 
 @Slf4j
 @SuperBuilder
@@ -58,7 +59,7 @@ public class ServerImpl extends Server {
 
     @Override
     protected void prepareRemote() {
-        new RCNode(nodeId).prepareServer(template.getName(), name);
+        new RCNode(nodeId).prepareServer(template.getName(), name, env);
     }
 
     @Override
