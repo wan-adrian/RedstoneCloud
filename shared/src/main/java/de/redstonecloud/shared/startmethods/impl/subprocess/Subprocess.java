@@ -51,6 +51,7 @@ public class Subprocess implements IStartMethod {
                     onExit.run();
                 }
             });
+            logger.start();
         } catch (IOException e) {
             log.info("Could not start new subprocess: ", e);
         }
@@ -84,7 +85,9 @@ public class Subprocess implements IStartMethod {
 
     @Override
     public void cleanup() {
-
+            if (logger != null) {
+                logger.cancel();
+            }
     }
 
     @Override
@@ -131,5 +134,29 @@ public class Subprocess implements IStartMethod {
                 timer.cancel();
             }
         }, timeout);
+    }
+
+    @Override
+    public void enableLogging() {
+        if(logger == null)
+            return;
+
+        logger.enableConsoleLogging();
+    }
+
+    @Override
+    public void disableLogging() {
+        if(logger == null)
+            return;
+
+        logger.disableConsoleLogging();
+    }
+
+    @Override
+    public boolean isLoggerEnabled() {
+        if(logger == null)
+            return false;
+
+        return logger.isConsoleLogging();
     }
 }

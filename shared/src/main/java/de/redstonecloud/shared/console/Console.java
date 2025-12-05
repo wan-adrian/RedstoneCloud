@@ -1,6 +1,7 @@
 package de.redstonecloud.shared.console;
 
 import de.redstonecloud.shared.commands.CommandManager;
+import de.redstonecloud.shared.utils.CurrentInstance;
 import de.redstonecloud.shared.utils.SharedUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -13,7 +14,7 @@ public class Console extends SimpleTerminalConsole {
     private static Console instance;
 
     public static Console getInstance() {
-        if(instance == null) instance = new Console();
+        if (instance == null) instance = new Console();
         return instance;
     }
 
@@ -30,20 +31,20 @@ public class Console extends SimpleTerminalConsole {
 
     @Override
     protected void runCommand(String command) {
-        //boolean hasLogServer = server.getCurrentLogServer() != null;
-        //if (!hasLogServer) {
-        String cmd = command.split(" ")[0];
-        String[] args = SharedUtils.dropFirstString(command.split(" "));
-        CommandManager.getInstance().executeCommand(cmd, args);
-        //} else {
-            /*if (command.equalsIgnoreCase("_exit")) {
-                server.getCurrentLogServer().disableConsoleLogging();
-                server.setCurrentLogServer(null);
+        boolean hasLogServer = CurrentInstance.currentLogServer != null;
+        if (!hasLogServer) {
+            String cmd = command.split(" ")[0];
+            String[] args = SharedUtils.dropFirstString(command.split(" "));
+            CommandManager.getInstance().executeCommand(cmd, args);
+        } else {
+            if (command.equalsIgnoreCase("_exit")) {
+                CurrentInstance.getCurrentLogServer().getStartMethod().disableLogging();
+                CurrentInstance.currentLogServer = null;
                 log.info("Exited console");
             } else {
-                server.getCurrentLogServer().getServer().writeConsole(command);
-            }*/
-        //}
+                CurrentInstance.getCurrentLogServer().writeConsole(command);
+            }
+        }
     }
 
     @Override

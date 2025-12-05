@@ -2,9 +2,7 @@ package de.redstonecloud.node;
 
 import de.redstonecloud.node.cluster.ClusterClient;
 import de.redstonecloud.node.cluster.grpc.RCMaster;
-import de.redstonecloud.node.commands.defaults.EndCommand;
-import de.redstonecloud.node.commands.defaults.InfoCommand;
-import de.redstonecloud.node.commands.defaults.ListCommand;
+import de.redstonecloud.node.commands.defaults.*;
 import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.server.NodeServerManager;
 import de.redstonecloud.shared.commands.CommandManager;
@@ -50,6 +48,8 @@ public class RedstoneNode {
         commandManager.addCommand(new EndCommand("end"));
         commandManager.addCommand(new InfoCommand("info"));
         commandManager.addCommand(new ListCommand("list"));
+        commandManager.addCommand(new ExecuteCommand("execute"));
+        commandManager.addCommand(new ConsoleCommand("console"));
     }
 
     public void shutdown() {

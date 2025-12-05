@@ -57,6 +57,10 @@ public class ServerErrorReader extends Thread {
             return;
         }
 
+        if(logger.isConsoleLogging()) {
+            log.error("[CONSOLE] {}", line);
+        }
+
         // Write to the same file as stdout
         writeToFile(line);
 

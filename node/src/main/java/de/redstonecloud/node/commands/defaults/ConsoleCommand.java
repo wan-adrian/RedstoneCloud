@@ -1,10 +1,8 @@
-package de.redstonecloud.cloud.commands.defaults;
+package de.redstonecloud.node.commands.defaults;
 
-import de.redstonecloud.api.util.EmptyArrays;
-import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.node.RedstoneNode;
+import de.redstonecloud.node.commands.Command;
 import de.redstonecloud.shared.server.Server;
-import de.redstonecloud.shared.startmethods.impl.subprocess.reader.ServerOutReader;
 import de.redstonecloud.shared.utils.CurrentInstance;
 import lombok.extern.log4j.Log4j2;
 
@@ -23,7 +21,7 @@ public class ConsoleCommand extends Command {
             return;
         }
 
-        Server server = RedstoneCloud.getInstance().getServerManager().getServer(args[0]);
+        Server server = RedstoneNode.getInstance().getServerManager().getServer(args[0]);
         if (server == null) {
             log.error("Server not found.");
             return;
@@ -41,6 +39,6 @@ public class ConsoleCommand extends Command {
 
     @Override
     public String[] getArgs() {
-        return getServer().getServerManager().getServers().values().stream().filter(Server::isLocal).map(Server::getName).toArray(String[]::new);
+        return getNode().getServerManager().getServers().values().stream().filter(Server::isLocal).map(Server::getName).toArray(String[]::new);
     }
 }

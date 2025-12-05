@@ -53,7 +53,13 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
 
 
             case EXECUTECOMMAND -> {
-                log.info("Master → command {}", msg.getExecuteCommand().getCommand());
+                log.info("Executing command on server {}: {}",
+                        msg.getExecuteCommand().getServer(),
+                        msg.getExecuteCommand().getCommand());
+
+                Server server = NodeServerManager.getInstance().getServer(msg.getExecuteCommand().getServer());
+                if(server == null) return;
+                server.writeConsole(msg.getExecuteCommand().getCommand());
             }
 
             case RESPONSE -> {

@@ -17,4 +17,7 @@ public interface IStartMethod {
     String getDirectory();
     void writeCommand(String command);
     boolean isActive();
+    void enableLogging();
+    void disableLogging();
+    boolean isLoggerEnabled();
 }

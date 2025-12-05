@@ -2,6 +2,7 @@ package de.redstonecloud.shared.console;
 
 import de.redstonecloud.shared.commands.AbstractCommand;
 import de.redstonecloud.shared.commands.CommandManager;
+import de.redstonecloud.shared.utils.CurrentInstance;
 import org.jline.reader.*;
 
 import java.util.List;
@@ -13,7 +14,7 @@ public class ConsoleCompleter implements Completer {
 
     @Override
     public void complete(LineReader lineReader, ParsedLine parsedLine, List<Candidate> candidates) {
-        //if(server.getCurrentLogServer() == null) {
+        if(CurrentInstance.currentLogServer == null) {
             if (parsedLine.wordIndex() == 0) {
                 if (parsedLine.word().isEmpty()) {
                     addCandidates(s -> candidates.add(new Candidate(s)));
@@ -57,13 +58,13 @@ public class ConsoleCompleter implements Completer {
                     }
                 }
             }
-        /*} else {
+        } else {
             if (parsedLine.wordIndex() == 0) {
                 if (parsedLine.word().isEmpty()) {
                     candidates.add(new Candidate("_exit"));
                 }
             }
-        }*/
+        }
     }
 
     private void addCandidates(Consumer<String> commandConsumer) {

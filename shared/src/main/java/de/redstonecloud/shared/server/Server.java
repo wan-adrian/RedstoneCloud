@@ -224,6 +224,14 @@ public abstract class Server implements ICloudServer, Cacheable {
 
         setStatus(ServerStatus.STOPPED);
 
+        if(startMethod != null) {
+            startMethod.cleanup();
+            if(startMethod.isLoggerEnabled()) {
+                startMethod.disableLogging();
+                CurrentInstance.currentLogServer = null;
+            }
+        }
+
         proxyNotify();
         saveLogs();
         cleanupServerDirectory();

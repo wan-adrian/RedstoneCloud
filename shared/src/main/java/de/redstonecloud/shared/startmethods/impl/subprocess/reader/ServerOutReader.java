@@ -146,6 +146,10 @@ public class ServerOutReader extends Thread {
 
         // Store in memory
         lastMessages.add(line);
+
+        if(logToConsole.get()) {
+            log.info("[CONSOLE] {}", line);
+        }
     }
 
     private void writeToFile(String line) {
@@ -196,6 +200,59 @@ public class ServerOutReader extends Thread {
 
         cleanupResources();
         this.interrupt();
+    }
+
+    /**
+     * Enables console logging and outputs all previously buffered content.
+     */
+    public void enableConsoleLogging() {
+        if (logToConsole.getAndSet(true)) {
+            return; // Already enabled
+        }
+
+        outputBufferedContent();
+    }
+
+    private void outputBufferedContent() {
+        Set<String> outputLines = new LinkedHashSet<>();
+
+        // Read from file first
+        if (logFile != null && logFile.exists()) {
+            try (BufferedReader reader = new BufferedReader(
+                    new FileReader(logFile, StandardCharsets.UTF_8))) {
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    log.info("[CONSOLE] {}", line);
+                    outputLines.add(line);
+                }
+            } catch (IOException e) {
+                log.error("Failed to read buffered log", e);
+            }
+        }
+
+        // Output any messages not yet in the file
+        for (String msg : lastMessages) {
+            if (!outputLines.contains(msg)) {
+                log.info("[CONSOLE] {}", msg);
+            }
+        }
+    }
+
+    /**
+     * Disables console logging.
+     */
+    public void disableConsoleLogging() {
+        logToConsole.set(false);
+    }
+
+    /**
+     * Checks if console logging is enabled.
+     *
+     * @return true if console logging is enabled
+     */
+    public boolean isConsoleLogging() {
+        return logToConsole.get();
     }
 
     /**
