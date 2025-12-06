@@ -8,6 +8,7 @@ import de.redstonecloud.cloud.config.CloudConfig;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.redis.PacketHandler;
 import de.redstonecloud.cloud.redis.RedisInstance;
+import de.redstonecloud.cloud.utils.Setup;
 import de.redstonecloud.cloud.utils.Translator;
 import de.redstonecloud.cloud.utils.Utils;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
@@ -15,12 +16,16 @@ import de.redstonecloud.shared.utils.Directories;
 import de.redstonecloud.shared.utils.SharedUtils;
 import eu.okaeri.configs.ConfigManager;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.core.config.ConfigurationSource;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter;
 
 import java.io.File;
+import java.io.InputStream;
 
-@Slf4j
+@Log4j2
 public class JarStart {
     @SneakyThrows
     public static void main(String[] args) {
@@ -32,11 +37,13 @@ public class JarStart {
         System.setProperty("Dterminal.ansi", "true");
         System.setProperty("Djansi.passthrough", "true");
 
-        //TODO: Do proper setup
-        //if (!Directories.setupCheck.exists()) Utils.setup();
+        File configFile = new File("./config.yml");
+        if (!configFile.exists()) {
+            log.info("[JARSTART] No config found, starting setup...");
+            new Setup().run();
+        }
 
         log.debug("[JARSTART] Loading config");
-        File configFile = new File("./config.yml");
         RedstoneCloud.config = ConfigManager.create(CloudConfig.class, it -> {
             it.withConfigurer(new SnakeYamlConfig());
             it.withBindFile(configFile);
