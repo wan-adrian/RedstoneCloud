@@ -246,7 +246,7 @@ public class Setup {
 
             TypeConfig typeConfig = ConfigManager.create(TypeConfig.class, it -> {
                 it.withConfigurer(new SnakeYamlConfig());
-                it.withBindFile(new File("./types/" + software + ".json"));
+                it.withBindFile(new File("./types/" + software + ".yml"));
                 it.load(true);
             });
 
@@ -267,9 +267,9 @@ public class Setup {
     }
 
     private static void copyTemplateFiles(String software, String templateName) throws IOException, URISyntaxException {
-        FileUtils.copyURLToFile(Utils.getResourceFile("templates/" + software + "/template_cfg.json"),
+        FileUtils.copyURLToFile(Utils.getResourceFile("templates/" + software + "/template_cfg.yml"),
                 new File("./template_configs/" + templateName + ".yml"));
-        FileUtils.copyURLToFile(Utils.getResourceFile("templates/" + software + "/type.json"),
+        FileUtils.copyURLToFile(Utils.getResourceFile("templates/" + software + "/type.yml"),
                 new File("./types/" + software + ".yml"));
         Utils.copyFolderFromCurrentJar("templates/" + software + "/files",
                 new File("./templates/" + templateName + "/"));

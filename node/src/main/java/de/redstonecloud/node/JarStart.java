@@ -3,6 +3,7 @@ package de.redstonecloud.node;
 import de.redstonecloud.api.util.Keys;
 import de.redstonecloud.node.config.NodeConfig;
 import de.redstonecloud.node.config.entires.RedisSettings;
+import de.redstonecloud.node.utils.Setup;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
 import de.redstonecloud.shared.utils.SharedUtils;
 import eu.okaeri.configs.ConfigManager;
@@ -17,6 +18,12 @@ public class JarStart {
 
         log.debug("[JARSTART] Loading config");
         File configFile = new File("./config.yml");
+
+        if (!configFile.exists()) {
+            log.debug("[JARSTART] No config found, starting setup...");
+            new Setup().run();
+        }
+
         RedstoneNode.config = ConfigManager.create(NodeConfig.class, it -> {
             it.withConfigurer(new SnakeYamlConfig());
             it.withBindFile(configFile);

@@ -9,21 +9,13 @@ import de.redstonecloud.cloud.config.entires.RedisSettings;
 import de.redstonecloud.cloud.redis.PacketHandler;
 import de.redstonecloud.cloud.redis.RedisInstance;
 import de.redstonecloud.cloud.utils.Setup;
-import de.redstonecloud.cloud.utils.Translator;
-import de.redstonecloud.cloud.utils.Utils;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
-import de.redstonecloud.shared.utils.Directories;
 import de.redstonecloud.shared.utils.SharedUtils;
 import eu.okaeri.configs.ConfigManager;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.core.config.ConfigurationSource;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter;
 
 import java.io.File;
-import java.io.InputStream;
 
 @Log4j2
 public class JarStart {
@@ -39,7 +31,7 @@ public class JarStart {
 
         File configFile = new File("./config.yml");
         if (!configFile.exists()) {
-            log.info("[JARSTART] No config found, starting setup...");
+            log.debug("[JARSTART] No config found, starting setup...");
             new Setup().run();
         }
 
@@ -68,7 +60,7 @@ public class JarStart {
         RedstoneCloud.cache = new Cache();
 
         try {
-            log.info(Translator.translate("cloud.startup.redis"));
+            log.info("Starting internal redis");
             RedstoneCloud.broker = new Broker("cloud", BrokerHelper.constructRegistry(), "cloud");
             RedstoneCloud.broker.listen("cloud", PacketHandler::handle);
         } catch (Exception e) {

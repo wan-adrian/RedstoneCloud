@@ -16,7 +16,6 @@ import de.redstonecloud.cloud.scheduler.TaskScheduler;
 import de.redstonecloud.cloud.scheduler.defaults.CheckTemplateTask;
 import de.redstonecloud.cloud.server.ServerManager;
 import de.redstonecloud.shared.console.ConsoleThread;
-import de.redstonecloud.cloud.utils.Translator;
 import de.redstonecloud.cloud.utils.Utils;
 import eu.okaeri.configs.ConfigManager;
 import lombok.Getter;
@@ -58,7 +57,7 @@ public class RedstoneCloud {
 
     private void boot() {
         running = true;
-        log.info(Translator.translate("cloud.startup"));
+        log.info("RedstoneCloud is starting...");
 
         log.debug("[BOOT] Starting cloud scheduler");
         this.scheduler = new TaskScheduler(new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors()));
@@ -133,7 +132,7 @@ public class RedstoneCloud {
 
         try {
             Thread.sleep(200);
-            log.info(Translator.translate("cloud.shutdown.started"));
+            log.info("RedstoneCloud is shutting down...");
 
             log.debug("[SHUTDOWN] Stopping all servers");
             synchronized(this) {
@@ -165,7 +164,7 @@ public class RedstoneCloud {
                 clusterManager.stopServer();
             }
 
-            log.info(Translator.translate("cloud.shutdown.complete"));
+            log.info("RedstoneCloud has been shut down.");
         } catch (Exception e) {
             log.error("Unexpected error during shutdown: ", e);
         }
