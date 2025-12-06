@@ -1,0 +1,20 @@
+# Generic info
+info:
+  # Name of the type
+  name: WDPE
+  # Start command
+  startCommand: java -jar proxy.jar
+  # Relative path to servers log file
+  logFile: logs/server.log
+  # Is proxy?
+  isProxy: true
+  # Command to stop the server
+  stopCommand: end
+  # File to set port in
+  portFile: config.yml
+  # Port placeholder (gets replaced with actual port)
+  portPlaceholder: '[port]'
+# Download URLs of certain modules
+downloads:
+  software: https://github.com/WaterdogPE/WaterdogPE/releases/download/latest/Waterdog.jar
+  bridge: https://github.com/RedstoneCloud/CloudBridge/releases/download/snapshot/cloudbridge.jar
