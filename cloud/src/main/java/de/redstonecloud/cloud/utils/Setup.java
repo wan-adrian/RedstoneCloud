@@ -60,6 +60,11 @@ public class Setup {
 
         log.info("Redis is set up.");
 
+        //TODO: Add once clustering is stable
+        boolean useCluster = false;
+        String firstNode = null;
+        int clusterPort = -1;
+        /*
         log.info("RedstoneCloud supports clustering. Do you want to enable clustering? (Y/n) [n]");
         boolean useCluster = awaitBooleanAnswer(DEF_USECLUSTER);
         int clusterPort = -1;
@@ -82,6 +87,7 @@ public class Setup {
         }
 
         log.info("Clustering is set up.");
+         */
 
         log.info("Do you want to set up a proxy server now? (Y/n) [n]");
         boolean setupProxy = awaitBooleanAnswer(false);
@@ -125,7 +131,7 @@ public class Setup {
         log.info("Summary:");
         log.info("Redis Server: {}:{}", redisIP, redisPort);
         log.info("Using internal Redis: {}", intRedis);
-        log.info("Using Clustering: {}", useCluster);
+        //log.info("Using Clustering: {}", useCluster);
         if (useCluster) {
             log.info("First Cluster Node: {}", firstNode);
         }

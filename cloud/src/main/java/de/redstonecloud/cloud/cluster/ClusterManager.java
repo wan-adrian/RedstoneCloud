@@ -31,6 +31,7 @@ public class ClusterManager {
     private static Map<String, String> idNameMap = new HashMap<>();
 
     private ClusterManager() {
+        log.warn("Experimental cluster mode is enabled. This feature is not stable yet and may cause data loss or other issues.");
         for (Node node : RedstoneCloud.getConfig().cluster().nodes()) {
             idNameMap.put(node.id(), node.name());
         }

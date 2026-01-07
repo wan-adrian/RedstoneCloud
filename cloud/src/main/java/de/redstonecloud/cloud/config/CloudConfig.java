@@ -3,6 +3,7 @@ package de.redstonecloud.cloud.config;
 import de.redstonecloud.cloud.config.entires.BridgeSettings;
 import de.redstonecloud.cloud.config.entires.ClusterSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
+import de.redstonecloud.shared.startmethods.StartMethods;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
@@ -14,6 +15,10 @@ import lombok.experimental.Accessors;
 @Getter
 @Accessors(fluent = true)
 public final class CloudConfig extends OkaeriConfig {
+    @Comment("Method to start servers")
+    @Comment("Options: SUBPROCESS, SCREEN")
+    private StartMethods startMethod = StartMethods.SUBPROCESS;
+
     @Comment("Redis Settings")
     private RedisSettings redis = new RedisSettings();
 

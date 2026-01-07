@@ -520,7 +520,7 @@ public class ServerManager {
                         Keys.ENV_REDIS_DB, String.valueOf(redisCfg.dbId()),
                         "BRIDGE_CFG", bridgeJson.toString()
                 ))
-                .selectedMethod(StartMethods.SUBPROCESS).build();
+                .selectedMethod(RedstoneCloud.getConfig().startMethod()).build();
 
         server.initName(id);
 

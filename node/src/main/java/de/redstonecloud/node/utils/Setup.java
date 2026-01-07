@@ -27,6 +27,15 @@ public class Setup {
     public void run() {
         log.info("RedstoneCloud Node - Welcome");
 
+        log.info("Clustering is in early development. It might not work as expected. Please do not expect it to work yet. However, if you do and find issues, please report them on our Discord.");
+        log.info("We do not recommend using clustering in production environments yet.");
+        log.info("Do you understand and want to proceed? (Y/n) [n]");
+        boolean proceed = awaitBooleanAnswer(false);
+        if(!proceed) {
+            log.info("Setup aborted. Exiting.");
+            System.exit(0);
+        }
+
         log.info("===== Redis Setup =====");
 
         log.info("Please enter the ip address of your redis instance [{}]", DEF_IP);
