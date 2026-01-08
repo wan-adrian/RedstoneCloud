@@ -5,7 +5,6 @@ import eu.okaeri.configs.annotation.Comment;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import org.checkerframework.checker.units.qual.C;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
