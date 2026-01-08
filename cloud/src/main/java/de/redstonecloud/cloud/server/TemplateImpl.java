@@ -1,5 +1,6 @@
 package de.redstonecloud.cloud.server;
 
+import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.cluster.ClusterManager;
 import de.redstonecloud.cloud.cluster.ClusterNode;
 import de.redstonecloud.shared.server.Server;
@@ -15,6 +16,8 @@ public class TemplateImpl extends Template {
 
     @Override
     protected void createNewServer() {
+        if(!RedstoneCloud.isRunning()) return;
+
         if(ClusterManager.isCluster()) {
             if(!getNodes().isEmpty()) {
                 ClusterNode node = ClusterManager.getInstance().getNodeById(getNodes().getFirst());
