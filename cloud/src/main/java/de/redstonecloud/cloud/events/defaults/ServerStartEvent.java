@@ -1,7 +1,7 @@
 package de.redstonecloud.cloud.events.defaults;
 
 import de.redstonecloud.cloud.events.Event;
-import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.shared.server.Server;
 import lombok.Getter;
 
 @Getter

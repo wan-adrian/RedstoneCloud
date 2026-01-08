@@ -18,13 +18,10 @@ import de.redstonecloud.cloud.events.defaults.PlayerTransferEvent;
 import de.redstonecloud.cloud.events.defaults.ServerReadyEvent;
 import de.redstonecloud.cloud.player.CloudPlayer;
 import de.redstonecloud.cloud.player.PlayerManager;
-import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.shared.server.Server;
 import de.redstonecloud.cloud.server.ServerManager;
-import de.redstonecloud.cloud.server.Template;
-import de.redstonecloud.cloud.utils.Translator;
+import de.redstonecloud.shared.server.Template;
 import lombok.extern.log4j.Log4j2;
-
-import java.util.UUID;
 
 @Log4j2
 public class PacketHandler {
@@ -50,7 +47,7 @@ public class PacketHandler {
 
         if (server == null || server.getStatus() != ServerStatus.STARTING) return;
         server.setStatus(ServerStatus.RUNNING);
-        log.info(Translator.translate("cloud.server.ready", clientId));
+        log.info("{} is ready", server.getName());
         RedstoneCloud.getInstance().getEventManager().callEvent(new ServerReadyEvent(server));
     }
 

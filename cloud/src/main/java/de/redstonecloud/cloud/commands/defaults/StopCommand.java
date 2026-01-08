@@ -3,7 +3,7 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
-import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.shared.server.Server;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Arrays;

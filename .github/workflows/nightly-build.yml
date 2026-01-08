@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - dev
-  pull_request:
-    branches:
-      - dev
 
 permissions:
   contents: write
@@ -22,11 +19,11 @@ jobs:
         uses: actions/checkout@v3
 
       # Step 2: Set up Java 23 environment
-      - name: Set up JDK 23
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '22'
+          java-version: '21'
 
       # Step 3: Build the project using Maven
       - name: Build with Maven
@@ -37,7 +34,7 @@ jobs:
         run: mkdir -p snapshot
 
       - name: Move build files to snapshot
-        run: mv cloud/target/cloud-0.1-beta-shaded.jar snapshot/redstonecloud.jar
+        run: mv cloud/target/cloud-1.0.0-SNAPSHOT-shaded.jar snapshot/redstonecloud.jar
 
       # Step 5: Set up Git configuration for tagging
       - name: Set up Git for pushing

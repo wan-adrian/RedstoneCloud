@@ -1,7 +1,7 @@
 package de.redstonecloud.cloud.scheduler.defaults;
 
 import de.redstonecloud.cloud.server.ServerManager;
-import de.redstonecloud.cloud.server.Template;
+import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.cloud.scheduler.task.Task;
 
 public class CheckTemplateTask extends Task {

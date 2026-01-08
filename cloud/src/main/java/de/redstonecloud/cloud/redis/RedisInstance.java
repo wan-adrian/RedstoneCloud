@@ -1,6 +1,6 @@
 package de.redstonecloud.cloud.redis;
 
-import de.redstonecloud.cloud.config.CloudConfig;
+import de.redstonecloud.cloud.RedstoneCloud;
 import lombok.Getter;
 import redis.embedded.RedisServer;
 
@@ -13,13 +13,12 @@ public class RedisInstance {
         return redisServer;
     }
 
-
     public RedisInstance() {
         if(redisServer != null) return;
         try {
             redisServer = RedisServer.builder()
-                    .port(CloudConfig.getCfg().get("redis_port").getAsInt())
-                    .setting("bind " + CloudConfig.getCfg().get("redis_bind").getAsString())
+                    .port(RedstoneCloud.getConfig().redis().port())
+                    .setting("bind " + RedstoneCloud.getConfig().redis().ip())
                     .build();
         } catch (Exception e) {
             throw new RuntimeException(e);

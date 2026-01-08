@@ -12,6 +12,6 @@ public class EndCommand extends Command {
     @Override
     protected void onCommand(String[] args) {
         log.info("Stopping Cloud using command...");
-        this.getServer().stop();
+        this.getServer().shutdown();
     }
 }
