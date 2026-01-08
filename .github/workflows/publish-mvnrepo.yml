@@ -1,0 +1,36 @@
+name: Publish Repo
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Java 23 environment
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          server-id: lpmc-redstonecloud    # must match POM <repository><id>
+          server-username: DEPLOY_USER
+          server-password: DEPLOY_PASSWORD
+          overwrite-settings: true
+
+      # Step 3: Build and deploy to Maven repository
+      - name: Build & Deploy to Maven
+        env:
+          DEPLOY_USER: ${{ secrets.MAVEN_REPO_USERNAME }}
+          DEPLOY_PASSWORD: ${{ secrets.MAVEN_REPO_PASSWORD }}
+        run: mvn -B clean deploy

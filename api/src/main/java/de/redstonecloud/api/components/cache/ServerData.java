@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 
 import java.util.UUID;
 
-public record ServerData(String name, UUID uuid, String template, String status, String serverType, int port, boolean proxy, JsonArray connectedPlayers, JsonObject extraData) {
+public record ServerData(String name, UUID uuid, String template, String status, String serverType, int port, boolean proxy, JsonArray connectedPlayers, JsonObject extraData, String nodeId, String address) {
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.addProperty("name", name);
@@ -17,6 +17,8 @@ public record ServerData(String name, UUID uuid, String template, String status,
         json.addProperty("proxy", proxy);
         json.add("connectedPlayers", connectedPlayers);
         json.add("extraData", extraData);
+        json.addProperty("nodeId", nodeId);
+        json.addProperty("address", address);
         return json;
     }
 
@@ -30,7 +32,9 @@ public record ServerData(String name, UUID uuid, String template, String status,
                 json.get("port").getAsInt(),
                 json.get("proxy").getAsBoolean(),
                 json.getAsJsonArray("connectedPlayers"),
-                json.getAsJsonObject("extraData")
+                json.getAsJsonObject("extraData"),
+                json.get("nodeId").getAsString(),
+                json.get("address").getAsString()
         );
     }
 }

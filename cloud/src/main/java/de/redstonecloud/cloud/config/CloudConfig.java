@@ -1,40 +1,33 @@
 package de.redstonecloud.cloud.config;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import de.redstonecloud.cloud.RedstoneCloud;
-import de.redstonecloud.cloud.config.entry.RedisEntry;
+import de.redstonecloud.cloud.config.entires.BridgeSettings;
+import de.redstonecloud.cloud.config.entires.ClusterSettings;
+import de.redstonecloud.cloud.config.entires.RedisSettings;
+import de.redstonecloud.shared.startmethods.StartMethods;
+import eu.okaeri.configs.OkaeriConfig;
+import eu.okaeri.configs.annotation.Comment;
+import eu.okaeri.configs.annotation.CustomKey;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+@EqualsAndHashCode(callSuper = true)
+@Getter
+@Accessors(fluent = true)
+public final class CloudConfig extends OkaeriConfig {
+    @Comment("Method to start servers")
+    @Comment("Options: SUBPROCESS, SCREEN")
+    private StartMethods startMethod = StartMethods.SUBPROCESS;
 
-public class CloudConfig {
-    private static JsonObject cfg;
+    @Comment("Redis Settings")
+    private RedisSettings redis = new RedisSettings();
 
-    public static JsonObject getCfg() {
-        return getCfg(false);
-    }
+    @Comment("Bridge Settings")
+    private BridgeSettings bridge = new BridgeSettings();
 
-    public static JsonObject getCfg(boolean reload) {
-        if (reload || cfg == null) {
-            try {
-                cfg = new Gson().fromJson(Files.readString(Paths.get(RedstoneCloud.workingDir + "/cloud.json")), JsonObject.class);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+    @Comment("Cluster settings")
+    private ClusterSettings cluster = new ClusterSettings();
 
-        return cfg;
-    }
-
-    public static RedisEntry getRedis() {
-        JsonObject cfg = getCfg();
-        return new RedisEntry(
-                cfg.get("redis_bind").getAsString(),
-                cfg.get("redis_port").getAsString(),
-                !cfg.get("custom_redis").getAsBoolean(),
-                !cfg.has("redis_db") ? 0 : cfg.get("redis_db").getAsInt()
-        );
-    }
+    @Comment("Enable or disable debug logging")
+    private boolean debug = false;
 }

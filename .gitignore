@@ -12,3 +12,5 @@ buildNumber.properties
 
 .project
 .classpath
+**/.flattened-pom.xml
+.flattened-pom.xml

@@ -1,0 +1,23 @@
+# Generic info
+info:
+  # Name of the type
+  name: PNX
+  # Start command
+  startCommand: java -Dfile.encoding=UTF-8 -Djansi.passthrough=true -Dterminal.ansi=true
+    -XX:+UseZGC -XX:+ZGenerational -XX:+UseStringDeduplication --add-opens java.base/java.lang=ALL-UNNAMED
+    --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED
+    -jar server.jar
+  # Relative path to servers log file
+  logFile: logs/server.log
+  # Is proxy?
+  isProxy: false
+  # Command to stop the server
+  stopCommand: stop
+  # File to set port in
+  portFile: pnx.yml
+  # Port placeholder (gets replaced with actual port)
+  portPlaceholder: '[port]'
+# Download URLs of certain modules
+downloads:
+  software: https://github.com/PowerNukkitX/PowerNukkitX/releases/download/snapshot/powernukkitx.jar
+  bridge: https://github.com/RedstoneCloud/CloudBridge/releases/download/snapshot/cloudbridge.jar

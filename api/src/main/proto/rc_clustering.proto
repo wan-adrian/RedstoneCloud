@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package de.redstonecloud.api;
+
+import "rc_generic.proto";
+
+option java_package = "de.redstonecloud.api";
+option java_outer_classname = "RCClusteringProto";
+
+/*
+  A single unified bidirectional RPC used between Node and Master.
+  Both sides may send any envelope at any time.
+*/
+service RCClusteringService {
+  rpc communicate(stream Payload) returns (stream Payload);
+}
+
+/*
+  A generic message wrapper so we can send multiple types over a single stream.
+*/
+message Payload {
+  oneof payload {
+    RegisterNode registerNode = 1;
+
+    PrepareServer prepareServer = 2;
+    StartServer startServer = 3;
+    StopServer stopServer = 4;
+    ExecuteCommand executeCommand = 5;
+
+    ServerDied serverDied = 20;
+    ServerStatusChange serverStatusChange = 21;
+    ServerPortSet serverPortSet = 22;
+
+    GenericResponse response = 30;
+
+    TempateChanges templateChanges = 40;
+    TypeChanges typeChanges = 41;
+
+    NodeShutdown nodeShutdown = 50;
+  }
+}
+
+/* ================================================================
+   Node → Master
+   ================================================================ */
+
+message RegisterNode {
+  string nodeId = 1;
+  string token = 2;
+}
+
+message PrepareServer {
+  string token = 1;
+  string template = 2;
+  string name = 3;
+  repeated KeyValuePair env = 4;
+}
+
+message StartServer {
+  string token = 1;
+  string server = 2;
+}
+
+message StopServer {
+  string token = 1;
+  string server = 2;
+  bool kill = 3;
+}
+
+message ExecuteCommand {
+  string token = 1;
+  string server = 2;
+  string command = 3;
+}
+
+/* ================================================================
+   Master → Node
+   ================================================================ */
+
+message ServerDied {
+  string token = 1;
+  string server = 2;
+}
+
+message ServerStatusChange {
+  string token = 1;
+  string server = 2;
+  string status = 3;
+}
+
+message ServerPortSet {
+  string token = 1;
+  string server = 2;
+  int32 port = 3;
+}
+
+message TempateChanges {
+  repeated Template templates = 1;
+}
+
+message TypeChanges {
+  repeated Type types = 1;
+}
+
+message NodeShutdown {}

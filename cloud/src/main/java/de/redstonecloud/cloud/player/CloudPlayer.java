@@ -1,21 +1,17 @@
 package de.redstonecloud.cloud.player;
 
 import com.google.common.net.HostAndPort;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import de.redstonecloud.api.components.ICloudPlayer;
 import de.redstonecloud.api.components.ICloudServer;
 import de.redstonecloud.api.components.ServerActions;
 import de.redstonecloud.api.components.cache.PlayerData;
-import de.redstonecloud.api.redis.broker.packet.Packet;
 import de.redstonecloud.api.redis.broker.packet.defaults.server.ServerActionPacket;
 import de.redstonecloud.api.redis.cache.Cacheable;
 import de.redstonecloud.api.util.Keys;
-import de.redstonecloud.cloud.server.Server;
+import de.redstonecloud.shared.server.Server;
 import lombok.Builder;
 import lombok.Setter;
-import org.json.JSONObject;
 
 import java.util.UUID;
 

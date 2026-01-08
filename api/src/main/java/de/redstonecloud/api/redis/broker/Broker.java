@@ -47,8 +47,8 @@ public class Broker {
     protected Int2ObjectOpenHashMap<Consumer<Message>> pendingMessageResponses;
 
     private final ExecutorService publishExecutor = Executors.newFixedThreadPool(8);
-
-    private boolean running = false;
+    private BrokerJedisPubSub pubsub;
+    private volatile boolean running = false;
 
     public Broker(String mainRoute, PacketRegistry packetRegistry, String... routes) {
         Preconditions.checkArgument(instance == null, "Broker already initialized");
@@ -85,25 +85,28 @@ public class Broker {
         this.pool = new JedisPool(config, address, port, 0, null, db);
 
         running = true;
-
+        pubsub = new BrokerJedisPubSub();
         new Thread(() -> {
-            while (running) { // Keep the subscriber alive
-                try (Jedis jedis = new Jedis(address, port, 0)) { // Use try-with-resources for safe closing
-                    jedis.select(db); // Select the correct database
+            while (running) {
+                try (Jedis jedis = new Jedis(address, port, 0)) {
+                    jedis.select(db);
 
-                    this.subscriber = jedis; // Save the subscriber instance if needed elsewhere
-                    System.out.println("Connecting to Redis...");
-
-                    jedis.subscribe(new BrokerJedisPubSub(), routes);
-
-                    System.out.println("Subscribed to: " + String.join(", ", routes));
+                    this.subscriber = jedis;
+                    jedis.subscribe(pubsub, routes);
                 } catch (Exception e) {
-                    // Log the exception for debugging purposes
-                    System.err.println("Subscriber error: " + e.getMessage());
-                    e.printStackTrace();
+                    if (!running) {
+                        break;
+                    }
+
+                    try {
+                        Thread.sleep(1000L); // backoff before reconnect
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
-        }).start();
+        }, "Redis-Subscriber").start();
     }
 
     public void publish(Packet packet) {
@@ -136,8 +139,10 @@ public class Broker {
 
     public void shutdown() {
         running = false;
-        this.pool.close();
+        pubsub.unsubscribe();
         this.subscriber.close();
+        this.pool.close();
+        this.publishExecutor.shutdown();
     }
 
     public void addPendingResponse(int id, ResponseContainer<?> callback) {

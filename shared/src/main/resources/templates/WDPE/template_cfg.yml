@@ -1,0 +1,26 @@
+# Generic info
+info:
+  # Name of the template
+  name: Proxy
+  # Type of the template
+  type: WDPE
+  # Whether or not this server is static (not-temporary)
+  isStatic: false
+  # Seperator between template name and number (e.g. Lobby-1)
+  seperator: '-'
+  # Node to run the template on (empty = master node)
+  node: ''
+# Behavior
+behavior:
+  # Max players per server
+  maxPlayers: 20
+  # Minimum servers running idle
+  minServers: 1
+  # Maximum servers running in total
+  maxServers: 1
+  # Maximum boot time before boot is cancelled (in ms)
+  bootMillis: 60000
+  # Maximum shutdown time before final kill (in ms)
+  shutdownMillis: 5000
+  # Whether or not the server should stop automatically if empty
+  autoStop: false
