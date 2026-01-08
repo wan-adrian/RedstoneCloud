@@ -10,7 +10,6 @@ info:
   seperator: '-'
   # Node to run the template on (empty = master node)
   node: ''
-  staticServer: false
 # Behavior
 behavior:
   # Max players per server
