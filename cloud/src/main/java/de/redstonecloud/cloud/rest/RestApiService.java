@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import de.redstonecloud.cloud.RedstoneCloud;
@@ -46,7 +47,48 @@ public class RestApiService {
             return;
         }
 
-        reloadTokens();
+        reloadTokens(false);
+        ensureStarted();
+    }
+
+    public void stop() {
+        if (httpServer == null) {
+            return;
+        }
+
+        httpServer.stop(1);
+        httpServer = null;
+        log.info("REST API stopped.");
+    }
+
+    public void reloadTokens() {
+        reloadTokens(true);
+    }
+
+    private void reloadTokens(boolean startIfNeeded) {
+        indexTokens();
+        log.info("REST API token cache reloaded ({} active token(s)).", tokenContexts.size());
+
+        if (tokenContexts.isEmpty()) {
+            if (httpServer != null) {
+                stop();
+            }
+            return;
+        }
+
+        if (startIfNeeded) {
+            ensureStarted();
+        }
+    }
+
+    private void ensureStarted() {
+        if (!settings.enabled()) {
+            return;
+        }
+
+        if (httpServer != null) {
+            return;
+        }
 
         if (tokenContexts.isEmpty()) {
             log.error("REST API is enabled but no valid tokens are configured. Skipping startup.");
@@ -62,21 +104,6 @@ public class RestApiService {
         } catch (Exception e) {
             log.error("Failed to start REST API on {}:{}", settings.host(), settings.port(), e);
         }
-    }
-
-    public void stop() {
-        if (httpServer == null) {
-            return;
-        }
-
-        httpServer.stop(1);
-        httpServer = null;
-        log.info("REST API stopped.");
-    }
-
-    public void reloadTokens() {
-        indexTokens();
-        log.info("REST API token cache reloaded ({} active token(s)).", tokenContexts.size());
     }
 
     private void indexTokens() {
@@ -216,6 +243,8 @@ public class RestApiService {
             }
 
             sendError(exchange, 404, "Route not found.");
+        } catch (BadRequestException e) {
+            sendError(exchange, 400, e.getMessage());
         } catch (Exception e) {
             log.error("REST API request failed: {} {}", method, path, e);
             sendError(exchange, 500, "Internal server error.");
@@ -401,7 +430,15 @@ public class RestApiService {
             return new JsonObject();
         }
 
-        return JsonParser.parseString(payload).getAsJsonObject();
+        try {
+            var element = JsonParser.parseString(payload);
+            if (!element.isJsonObject()) {
+                throw new BadRequestException("Request body must be a JSON object.");
+            }
+            return element.getAsJsonObject();
+        } catch (JsonSyntaxException e) {
+            throw new BadRequestException("Malformed JSON in request body.");
+        }
     }
 
     private void sendError(HttpExchange exchange, int statusCode, String message) throws IOException {
@@ -419,4 +456,10 @@ public class RestApiService {
     }
 
     private record TokenContext(String name, Set<String> permissions) {}
+
+    private static final class BadRequestException extends RuntimeException {
+        private BadRequestException(String message) {
+            super(message);
+        }
+    }
 }
