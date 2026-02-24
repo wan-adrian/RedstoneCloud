@@ -5,6 +5,7 @@ import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.cloud.config.entires.RestApiSettings;
 import de.redstonecloud.cloud.config.entires.RestApiToken;
 import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
 import lombok.extern.log4j.Log4j2;
 
 import java.security.SecureRandom;
@@ -65,7 +66,8 @@ public class RestApiCommand extends Command {
     }
 
     @Override
-    protected void onCommand(String[] args) {
+    public void onCommand(CommandExecution execution) {
+        String[] args = execution.args();
         if (args.length == 0 || "help".equalsIgnoreCase(args[0])) {
             showHelp();
             return;

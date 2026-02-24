@@ -5,7 +5,7 @@ import com.google.gson.JsonParser;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.shared.commands.CommandCompletion;
-import de.redstonecloud.shared.commands.CommandArgs;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.cloud.utils.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +20,9 @@ public class UpdateCommand extends Command {
 
     public UpdateCommand(String cmd) {
         super(cmd);
-        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE);
+        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE, "template");
         CommandCompletion.Node all = CommandCompletion.literal("all");
-        CommandCompletion.Flag reboot = CommandCompletion.flagSwitch("--reboot");
+        CommandCompletion.Flag reboot = CommandCompletion.flagSwitch("reboot", "--reboot");
 
         CommandCompletion completion = CommandCompletion.anyOrder(template, reboot);
         completion.add(all);
@@ -31,15 +31,12 @@ public class UpdateCommand extends Command {
     }
 
     @Override
-    protected void onCommand(String[] args) {
-        if (args.length < 1) {
-            log.warn("Usage: update <templateName|all> [--reboot]");
-            return;
+    public void onCommand(CommandExecution execution) {
+        String templateName = execution.value("template");
+        if (templateName == null || templateName.isBlank()) {
+            templateName = execution.positional(0);
         }
-
-        CommandArgs parsed = parseArgs(args);
-        String templateName = parsed.positionals().isEmpty() ? null : parsed.positionals().getFirst();
-        boolean reboot = parsed.hasFlag("reboot");
+        boolean reboot = execution.has("reboot");
 
         var serverManager = RedstoneCloud.getInstance().getServerManager();
 

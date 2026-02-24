@@ -2,9 +2,9 @@ package de.redstonecloud.cloud.commands.defaults;
 
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.cloud.player.CloudPlayer;
-import lombok.extern.log4j.Log4j2;
-
 import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,8 @@ public class PlayerCommand extends Command {
     }
 
     @Override
-    protected void onCommand(String[] args) {
+    public void onCommand(CommandExecution execution) {
+        String[] args = execution.args();
         if (args.length < 1) {
             showUsage();
             return;

@@ -3,6 +3,7 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Server;
 import de.redstonecloud.shared.startmethods.impl.subprocess.reader.ServerOutReader;
 import de.redstonecloud.shared.utils.CurrentInstance;
@@ -13,17 +14,21 @@ public class ConsoleCommand extends Command {
     public ConsoleCommand(String cmd) {
         super(cmd);
         setCompletions(CommandCompletion.root()
-                .add(CommandCompletion.param(CommandCompletion.ParamType.SERVER_LOCAL)));
+                .add(CommandCompletion.param(CommandCompletion.ParamType.SERVER_LOCAL, "server")));
     }
 
     @Override
-    protected void onCommand(String[] args) {
-        if (args.length == 0) {
+    public void onCommand(CommandExecution execution) {
+        if (execution.positionals().isEmpty()) {
             log.error("Usage: console <server>");
             return;
         }
 
-        Server server = RedstoneCloud.getInstance().getServerManager().getServer(args[0]);
+        String serverName = execution.value("server");
+        if (serverName == null || serverName.isBlank()) {
+            serverName = execution.positional(0);
+        }
+        Server server = RedstoneCloud.getInstance().getServerManager().getServer(serverName);
         if (server == null) {
             log.error("Server not found.");
             return;

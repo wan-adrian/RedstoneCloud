@@ -3,7 +3,7 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.shared.commands.CommandCompletion;
-import de.redstonecloud.shared.commands.CommandArgs;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Template;
 import lombok.extern.log4j.Log4j2;
 
@@ -11,21 +11,18 @@ import lombok.extern.log4j.Log4j2;
 public class StartCommand extends Command {
     public StartCommand(String cmd) {
         super(cmd);
-        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE);
-        CommandCompletion.Flag id = CommandCompletion.flag(CommandCompletion.ParamType.ANY, "--id", "-i");
-        CommandCompletion.Flag amount = CommandCompletion.flag(CommandCompletion.ParamType.ANY, "--amount", "-a");
+        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE, "template");
+        CommandCompletion.Flag id = CommandCompletion.flag("id", CommandCompletion.ParamType.ANY, "--id", "-i");
+        CommandCompletion.Flag amount = CommandCompletion.flag("amount", CommandCompletion.ParamType.ANY, "--amount", "-a");
         setCompletions(CommandCompletion.anyOrder(template, id, amount).restrictRootTo(template));
     }
 
     @Override
-    protected void onCommand(String[] args) {
-        if (args.length == 0) {
-            log.error("Usage: start <template> [count]");
-            return;
+    public void onCommand(CommandExecution execution) {
+        String templateName = execution.value("template");
+        if (templateName == null || templateName.isBlank()) {
+            templateName = execution.positional(0);
         }
-
-        CommandArgs parsed = parseArgs(args);
-        String templateName = parsed.positionals().isEmpty() ? null : parsed.positionals().getFirst();
         if (templateName == null || templateName.isBlank()) {
             log.error("Usage: start <template> [--id <id>] [--amount <n>]");
             return;
@@ -43,18 +40,12 @@ public class StartCommand extends Command {
         //command: start <template> --id <id> [count]
         int newId = -1;
         int amount = 1;
-        String idRaw = parsed.flagValue("id");
-        if (idRaw == null) {
-            idRaw = parsed.flagValue("i");
-        }
+        String idRaw = execution.value("id");
         if (idRaw != null) {
             newId = parseIntSafe(idRaw, -1);
         }
 
-        String amountRaw = parsed.flagValue("amount");
-        if (amountRaw == null) {
-            amountRaw = parsed.flagValue("a");
-        }
+        String amountRaw = execution.value("amount");
         if (amountRaw != null) {
             amount = parseIntSafe(amountRaw, 1);
         }

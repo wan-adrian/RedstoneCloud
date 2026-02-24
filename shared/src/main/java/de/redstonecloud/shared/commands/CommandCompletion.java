@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -21,12 +22,24 @@ public final class CommandCompletion {
     }
 
     public static final class Flag {
+        private final String name;
+        private final List<String> aliases;
         private final List<Node> flagNodes;
         private final Node valueNode;
 
-        private Flag(List<Node> flagNodes, Node valueNode) {
+        private Flag(String name, List<String> aliases, List<Node> flagNodes, Node valueNode) {
+            this.name = name;
+            this.aliases = aliases;
             this.flagNodes = flagNodes;
             this.valueNode = valueNode;
+        }
+
+        public String name() {
+            return name;
+        }
+
+        public List<String> aliases() {
+            return aliases;
         }
 
         public List<Node> flagNodes() {
@@ -84,14 +97,20 @@ public final class CommandCompletion {
 
     public static final class ParamNode implements Node {
         private final ParamType type;
+        private final String name;
         private final List<Node> children = new ArrayList<>();
 
-        public ParamNode(ParamType type) {
+        public ParamNode(ParamType type, String name) {
             this.type = type;
+            this.name = name;
         }
 
         public ParamType type() {
             return type;
+        }
+
+        public String name() {
+            return name;
         }
 
         @Override
@@ -123,6 +142,7 @@ public final class CommandCompletion {
     private static final Map<ParamType, Supplier<Collection<String>>> RESOLVERS = new ConcurrentHashMap<>();
 
     private final List<Node> roots = new ArrayList<>();
+    private final Map<String, String> flagAliases = new HashMap<>();
 
     public static CommandCompletion root() {
         return new CommandCompletion();
@@ -133,30 +153,38 @@ public final class CommandCompletion {
     }
 
     public static ParamNode param(ParamType type) {
-        return new ParamNode(type);
+        return new ParamNode(type, null);
     }
 
-    public static Flag flag(ParamType valueType, String... names) {
+    public static ParamNode param(ParamType type, String name) {
+        return new ParamNode(type, name);
+    }
+
+    public static Flag flag(String flagName, ParamType valueType, String... names) {
         List<Node> flags = new ArrayList<>();
-        ParamNode valueNode = param(valueType);
+        ParamNode valueNode = param(valueType, flagName);
+        List<String> aliases = new ArrayList<>();
         for (String name : names) {
             LiteralNode flag = literal(name);
             flag.then(valueNode);
             flags.add(flag);
+            aliases.add(name);
         }
-        return new Flag(flags, valueNode);
+        return new Flag(flagName, aliases, flags, valueNode);
     }
 
-    public static Flag flag(String... names) {
-        return flag(ParamType.ANY, names);
+    public static Flag flag(String name, String... names) {
+        return flag(name, ParamType.ANY, names);
     }
 
-    public static Flag flagSwitch(String... names) {
+    public static Flag flagSwitch(String flagName, String... names) {
         List<Node> flags = new ArrayList<>();
+        List<String> aliases = new ArrayList<>();
         for (String name : names) {
             flags.add(literal(name));
+            aliases.add(name);
         }
-        return new Flag(flags, null);
+        return new Flag(flagName, aliases, flags, null);
     }
 
     public static CommandCompletion anyOrder(Node main, Flag... flags) {
@@ -176,6 +204,7 @@ public final class CommandCompletion {
                     allFlags.add(node);
                 }
             }
+            completion.registerAliases(flag);
         }
 
         if (main != null) {
@@ -254,6 +283,38 @@ public final class CommandCompletion {
         return candidates;
     }
 
+    public MatchResult match(String[] args) {
+        if (args == null) {
+            return new MatchResult(Map.of());
+        }
+        MatchResult result = match(args, 0, roots, new HashMap<>());
+        return result == null ? new MatchResult(Map.of()) : result;
+    }
+
+    private MatchResult match(String[] args, int index, List<Node> frontier, Map<String, String> params) {
+        if (index >= args.length) {
+            return new MatchResult(params);
+        }
+        if (frontier == null || frontier.isEmpty()) {
+            return null;
+        }
+        String token = args[index];
+        for (Node node : frontier) {
+            if (!node.matches(token)) {
+                continue;
+            }
+            Map<String, String> next = new HashMap<>(params);
+            if (node instanceof ParamNode paramNode && paramNode.name() != null) {
+                next.put(paramNode.name(), token);
+            }
+            MatchResult result = match(args, index + 1, node.children(), next);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
     public static void registerResolver(ParamType type, Supplier<Collection<String>> supplier) {
         if (type == null || supplier == null) {
             return;
@@ -272,5 +333,36 @@ public final class CommandCompletion {
         } catch (Exception ignored) {
             return List.of();
         }
+    }
+
+    public String canonicalFlagName(String raw) {
+        String key = normalizeFlag(raw);
+        return flagAliases.getOrDefault(key, key);
+    }
+
+    private void registerAliases(Flag flag) {
+        if (flag == null) {
+            return;
+        }
+        if (flag.name() != null) {
+            flagAliases.put(normalizeFlag(flag.name()), flag.name());
+        }
+        for (String alias : flag.aliases()) {
+            String key = normalizeFlag(alias);
+            if (!key.isEmpty()) {
+                flagAliases.put(key, flag.name());
+            }
+        }
+    }
+
+    private String normalizeFlag(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String name = raw.startsWith("--") ? raw.substring(2) : raw.startsWith("-") ? raw.substring(1) : raw;
+        return name.toLowerCase(Locale.ROOT);
+    }
+
+    public record MatchResult(Map<String, String> params) {
     }
 }

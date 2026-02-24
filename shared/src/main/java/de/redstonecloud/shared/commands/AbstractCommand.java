@@ -10,7 +10,11 @@ public abstract class AbstractCommand {
         this.cmd = cmd;
     }
 
-    protected abstract void onCommand(String[] args);
+    protected void onCommand(String[] args) {}
+
+    public void onCommand(CommandExecution execution) {
+        onCommand(execution.args());
+    }
 
     public String getCommand() {
         return this.cmd;
@@ -26,5 +30,9 @@ public abstract class AbstractCommand {
 
     protected final CommandArgs parseArgs(String[] args) {
         return CommandArgs.parse(args);
+    }
+
+    public boolean hasCompletions() {
+        return completions != null;
     }
 }

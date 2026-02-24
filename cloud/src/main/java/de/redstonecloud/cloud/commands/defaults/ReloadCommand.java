@@ -3,7 +3,7 @@ package de.redstonecloud.cloud.commands.defaults;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.shared.commands.CommandCompletion;
-import de.redstonecloud.shared.server.Server;
+import de.redstonecloud.shared.commands.CommandExecution;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Arrays;
@@ -18,7 +18,8 @@ public class ReloadCommand extends Command {
     }
 
     @Override
-    protected void onCommand(String[] args) {
+    public void onCommand(CommandExecution execution) {
+        String[] args = execution.args();
         if (args.length == 0) {
             log.error("Usage: reload <templates>");
             return;

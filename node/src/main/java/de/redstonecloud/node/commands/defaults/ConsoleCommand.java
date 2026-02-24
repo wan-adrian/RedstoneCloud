@@ -2,6 +2,8 @@ package de.redstonecloud.node.commands.defaults;
 
 import de.redstonecloud.node.RedstoneNode;
 import de.redstonecloud.node.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Server;
 import de.redstonecloud.shared.utils.CurrentInstance;
 import lombok.extern.log4j.Log4j2;
@@ -10,10 +12,13 @@ import lombok.extern.log4j.Log4j2;
 public class ConsoleCommand extends Command {
     public ConsoleCommand(String cmd) {
         super(cmd);
+        setCompletions(CommandCompletion.root()
+                .add(CommandCompletion.param(CommandCompletion.ParamType.SERVER_LOCAL, "server")));
     }
 
     @Override
-    protected void onCommand(String[] args) {
+    public void onCommand(CommandExecution execution) {
+        String[] args = execution.args();
         if (args.length == 0) {
             log.error("Usage: console <server>");
             return;
