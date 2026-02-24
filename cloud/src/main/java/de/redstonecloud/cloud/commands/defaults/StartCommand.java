@@ -1,27 +1,34 @@
 package de.redstonecloud.cloud.commands.defaults;
 
-import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Template;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 public class StartCommand extends Command {
-    public int argCount = 1;
-
     public StartCommand(String cmd) {
         super(cmd);
+        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE, "template");
+        CommandCompletion.Flag id = CommandCompletion.flag("id", CommandCompletion.ParamType.ANY, "--id", "-i");
+        CommandCompletion.Flag amount = CommandCompletion.flag("amount", CommandCompletion.ParamType.ANY, "--amount", "-a");
+        setCompletions(CommandCompletion.anyOrder(template, id, amount).restrictRootTo(template));
     }
 
     @Override
-    protected void onCommand(String[] args) {
-        if (args.length == 0) {
-            log.error("Usage: start <template> [count]");
+    public void onCommand(CommandExecution execution) {
+        String templateName = execution.value("template");
+        if (templateName == null || templateName.isBlank()) {
+            templateName = execution.positional(0);
+        }
+        if (templateName == null || templateName.isBlank()) {
+            log.error("Usage: start <template> [--id <id>] [--amount <n>]");
             return;
         }
 
-        Template template = RedstoneCloud.getInstance().getServerManager().getTemplate(args[0]);
+        Template template = RedstoneCloud.getInstance().getServerManager().getTemplate(templateName);
         if (template == null) {
             log.error("Template not found.");
             return;
@@ -33,18 +40,14 @@ public class StartCommand extends Command {
         //command: start <template> --id <id> [count]
         int newId = -1;
         int amount = 1;
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equalsIgnoreCase("--id") || args[i].equalsIgnoreCase("-i")) {
-                if (i + 1 < args.length) {
-                    newId = Integer.parseInt(args[i + 1]);
-                }
-            }
+        String idRaw = execution.value("id");
+        if (idRaw != null) {
+            newId = parseIntSafe(idRaw, -1);
+        }
 
-            if (args[i].equalsIgnoreCase("--amount") || args[i].equalsIgnoreCase("-a")) {
-                if (i + 1 < args.length) {
-                    amount = Integer.parseInt(args[i + 1]);
-                }
-            }
+        String amountRaw = execution.value("amount");
+        if (amountRaw != null) {
+            amount = parseIntSafe(amountRaw, 1);
         }
 
         if (amount != 1 && newId == -1) {
@@ -55,8 +58,11 @@ public class StartCommand extends Command {
         log.info("Successfully started server using template " + template.getName());
     }
 
-    @Override
-    public String[] getArgs() {
-        return getServer().getServerManager().getTemplates().keySet().toArray(EmptyArrays.STRING);
+    private int parseIntSafe(String value, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 }

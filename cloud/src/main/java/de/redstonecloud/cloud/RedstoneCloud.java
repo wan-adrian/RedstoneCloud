@@ -9,6 +9,8 @@ import de.redstonecloud.cloud.events.EventManager;
 import de.redstonecloud.cloud.player.PlayerManager;
 import de.redstonecloud.cloud.plugin.PluginManager;
 import de.redstonecloud.cloud.redis.RedisInstance;
+import de.redstonecloud.cloud.rest.RestApiService;
+import de.redstonecloud.shared.commands.CommandCompletion;
 import de.redstonecloud.shared.commands.CommandManager;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
 import de.redstonecloud.shared.console.Console;
@@ -26,6 +28,7 @@ import lombok.extern.log4j.Log4j2;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.security.PublicKey;
+import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 @Getter
@@ -49,6 +52,7 @@ public class RedstoneCloud {
     private EventManager eventManager;
     private TaskScheduler scheduler;
     private KeyCache keyCache;
+    private RestApiService restApiService;
 
     protected RedstoneCloud() {
         instance = this;
@@ -93,6 +97,15 @@ public class RedstoneCloud {
         log.debug("[BOOT] Enable all plugins");
         this.pluginManager.enableAllPlugins();
 
+        registerCompletionResolvers();
+
+        if (config.restApi().enabled()) {
+            log.debug("[BOOT] Starting REST API");
+            this.restApiService = new RestApiService(config.restApi());
+            this.restApiService.start();
+        } else {
+            log.debug("[BOOT] REST API disabled.");
+        }
 
         if(!config.cluster().nodes().isEmpty()) {
             log.debug("[BOOT] Loading cluster management");
@@ -117,8 +130,53 @@ public class RedstoneCloud {
         commandManager.addCommand(new PlayerCommand("player"));
         commandManager.addCommand(new UpdateCommand("update"));
         commandManager.addCommand(new ReloadCommand("reload"));
+        commandManager.addCommand(new RestApiCommand("restapi"));
 
         log.debug("[BOOT] Registered {} commands", commandManager.getCommandMap().size());
+    }
+
+    private void registerCompletionResolvers() {
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.SERVER, () ->
+                getServerManager().getServers().values().stream()
+                        .map(server -> server.getName())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList()
+        );
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.SERVER_LOCAL, () ->
+                getServerManager().getServers().values().stream()
+                        .filter(server -> server.isLocal())
+                        .map(server -> server.getName())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList()
+        );
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.TEMPLATE, () ->
+                getServerManager().getTemplates().values().stream()
+                        .map(template -> template.getName())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList()
+        );
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.TYPE, () ->
+                getServerManager().getTypes().values().stream()
+                        .map(type -> type.name())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList()
+        );
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.PLAYER, () ->
+                getPlayerManager().getPlayers().values().stream()
+                        .map(player -> player.getName())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList()
+        );
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.REST_TOKEN, () ->
+                getConfig().restApi().tokens().stream()
+                        .map(token -> token.name())
+                        .filter(name -> name != null && !name.isBlank())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList()
+        );
+        CommandCompletion.registerResolver(CommandCompletion.ParamType.PERMISSION, () ->
+                List.of("cloud.read", "cloud.player.read", "cloud.server.manage", "cloud.server.execute", "*")
+        );
     }
 
     public void shutdown() {
@@ -162,6 +220,11 @@ public class RedstoneCloud {
             if(clusterManager != null) {
                 log.debug("[SHUTDOWN] Stopping cluster management");
                 clusterManager.stopServer();
+            }
+
+            if (restApiService != null) {
+                log.debug("[SHUTDOWN] Stopping REST API");
+                restApiService.stop();
             }
 
             log.info("RedstoneCloud has been shut down.");

@@ -25,6 +25,46 @@ The cloud will generate a basic configuration structure automatically.
 
 Ensure that you have the latest version of our [Bridge](https://github.com/RedstoneCloud/CloudBridge) installed on your server to establish a connection to the cloud.
 
+## 🔌 Optional REST API
+RedstoneCloud can expose an optional REST API for external tooling and dashboards.
+
+Enable it in `config.yml`:
+```yml
+restApi:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8080
+  tokens:
+    - name: "admin"
+      token: "REPLACE_WITH_LONG_RANDOM_TOKEN"
+      permissions:
+        - "*"
+      enabled: true
+```
+
+Authentication:
+* `Authorization: Bearer <token>` (recommended)
+* `X-Api-Token: <token>`
+
+Permission keys:
+* `cloud.read`
+* `cloud.player.read`
+* `cloud.server.manage`
+* `cloud.server.execute`
+* `*` (full access)
+
+Main routes (`/api/v1`):
+* `GET /health`
+* `GET /me`
+* `GET /servers`
+* `GET /servers/{name}`
+* `POST /servers/start`
+* `POST /servers/{name}/stop`
+* `POST /servers/{name}/kill`
+* `POST /servers/{name}/execute`
+* `GET /players`
+* `GET /templates`
+
 ## 🙌 How to Contribute
 We encourage contributions to help improve RedstoneCloud! Here's how you can get involved:
 

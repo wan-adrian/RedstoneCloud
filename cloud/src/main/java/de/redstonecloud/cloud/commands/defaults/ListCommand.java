@@ -2,19 +2,20 @@ package de.redstonecloud.cloud.commands.defaults;
 
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Server;
 
 import java.util.Comparator;
 
 public class ListCommand extends Command {
-    public int argCount = 0;
-
     public ListCommand(String cmd) {
         super(cmd);
+        setCompletions(CommandCompletion.root());
     }
 
     @Override
-    protected void onCommand(String[] args) {
+    public void onCommand(CommandExecution execution) {
         System.out.format("+---------+---------+-----------+----------+------------------+%n");
         System.out.format("| Name    | Type    |  Status   | Port     | NodeId           |%n");
         System.out.format("+---------+---------+-----------+----------+------------------+%n");

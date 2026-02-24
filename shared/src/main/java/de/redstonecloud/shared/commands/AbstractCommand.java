@@ -1,22 +1,38 @@
 package de.redstonecloud.shared.commands;
 
-import de.redstonecloud.api.util.EmptyArrays;
+import de.redstonecloud.shared.commands.CommandCompletion;
 
 public abstract class AbstractCommand {
     public String cmd;
-    public int argCount = 0;
+    private CommandCompletion completions;
 
     public AbstractCommand(String cmd) {
         this.cmd = cmd;
     }
 
-    protected abstract void onCommand(String[] args);
+    protected void onCommand(String[] args) {}
+
+    public void onCommand(CommandExecution execution) {
+        onCommand(execution.args());
+    }
 
     public String getCommand() {
         return this.cmd;
     }
 
-    public String[] getArgs() {
-        return EmptyArrays.STRING;
+    public CommandCompletion getCompletions() {
+        return completions;
+    }
+
+    protected final void setCompletions(CommandCompletion completions) {
+        this.completions = completions;
+    }
+
+    protected final CommandArgs parseArgs(String[] args) {
+        return CommandArgs.parse(args);
+    }
+
+    public boolean hasCompletions() {
+        return completions != null;
     }
 }

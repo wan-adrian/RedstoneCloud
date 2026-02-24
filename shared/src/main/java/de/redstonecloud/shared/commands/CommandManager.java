@@ -35,7 +35,11 @@ public class CommandManager {
         if (cmd != null) {
             try {
                 log.info("Executing {}", cmd.getCommand());
-                cmd.onCommand(args);
+                if (cmd.hasCompletions()) {
+                    cmd.onCommand(CommandExecution.from(cmd, args));
+                } else {
+                    cmd.onCommand(args);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
