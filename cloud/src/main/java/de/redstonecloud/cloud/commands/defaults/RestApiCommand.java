@@ -4,6 +4,7 @@ import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.cloud.config.entires.RestApiSettings;
 import de.redstonecloud.cloud.config.entires.RestApiToken;
+import de.redstonecloud.shared.commands.CommandCompletion;
 import lombok.extern.log4j.Log4j2;
 
 import java.security.SecureRandom;
@@ -17,7 +18,50 @@ public class RestApiCommand extends Command {
 
     public RestApiCommand(String cmd) {
         super(cmd);
-        this.argCount = 1;
+        CommandCompletion completion = CommandCompletion.root();
+
+        completion.add(CommandCompletion.literal("status"));
+        completion.add(CommandCompletion.literal("help"));
+
+        CommandCompletion.Node token = CommandCompletion.literal("token");
+        token.then(CommandCompletion.literal("list"));
+        token.then(CommandCompletion.literal("add")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.ANY)));
+        token.then(CommandCompletion.literal("rotate")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        token.then(CommandCompletion.literal("remove")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        token.then(CommandCompletion.literal("enable")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        token.then(CommandCompletion.literal("disable")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        token.then(CommandCompletion.literal("show")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        completion.add(token);
+
+        CommandCompletion.Node perm = CommandCompletion.literal("perm");
+        perm.then(CommandCompletion.literal("list")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        perm.then(CommandCompletion.literal("add")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)
+                        .then(CommandCompletion.param(CommandCompletion.ParamType.PERMISSION))));
+        perm.then(CommandCompletion.literal("remove")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)
+                        .then(CommandCompletion.param(CommandCompletion.ParamType.PERMISSION))));
+        completion.add(perm);
+
+        CommandCompletion.Node permission = CommandCompletion.literal("permission");
+        permission.then(CommandCompletion.literal("list")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)));
+        permission.then(CommandCompletion.literal("add")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)
+                        .then(CommandCompletion.param(CommandCompletion.ParamType.PERMISSION))));
+        permission.then(CommandCompletion.literal("remove")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.REST_TOKEN)
+                        .then(CommandCompletion.param(CommandCompletion.ParamType.PERMISSION))));
+        completion.add(permission);
+
+        setCompletions(completion);
     }
 
     @Override
@@ -278,8 +322,4 @@ public class RestApiCommand extends Command {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    @Override
-    public String[] getArgs() {
-        return new String[] { "status", "token", "perm", "help" };
-    }
 }

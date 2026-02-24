@@ -1,6 +1,5 @@
 package de.redstonecloud.node.commands.defaults;
 
-import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.node.RedstoneNode;
 import de.redstonecloud.node.commands.Command;
 import de.redstonecloud.shared.server.Server;
@@ -8,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ExecuteCommand extends Command {
-    public int argCount = 1;
-
     public ExecuteCommand(String cmd) {
         super(cmd);
     }
@@ -40,8 +37,4 @@ public class ExecuteCommand extends Command {
         log.info("Command executed on server " + server.getName() + ": " + command);
     }
 
-    @Override
-    public String[] getArgs() {
-        return getNode().getServerManager().getServers().keySet().toArray(EmptyArrays.STRING);
-    }
 }

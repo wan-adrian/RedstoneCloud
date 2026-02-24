@@ -1,8 +1,8 @@
 package de.redstonecloud.cloud.commands.defaults;
 
-import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
 import de.redstonecloud.shared.server.Server;
 import lombok.extern.log4j.Log4j2;
 
@@ -10,10 +10,10 @@ import java.util.Arrays;
 
 @Log4j2
 public class StopCommand extends Command {
-    public int argCount = 1;
-
     public StopCommand(String cmd) {
         super(cmd);
+        setCompletions(CommandCompletion.root()
+                .add(CommandCompletion.param(CommandCompletion.ParamType.SERVER)));
     }
 
     @Override
@@ -45,8 +45,4 @@ public class StopCommand extends Command {
         server.stop();
     }
 
-    @Override
-    public String[] getArgs() {
-        return getServer().getServerManager().getServers().keySet().toArray(EmptyArrays.STRING);
-    }
 }

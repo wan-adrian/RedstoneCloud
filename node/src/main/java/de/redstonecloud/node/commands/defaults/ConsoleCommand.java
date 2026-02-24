@@ -8,8 +8,6 @@ import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 public class ConsoleCommand extends Command {
-    public int argCount = 1;
-
     public ConsoleCommand(String cmd) {
         super(cmd);
     }
@@ -37,8 +35,4 @@ public class ConsoleCommand extends Command {
         CurrentInstance.currentLogServer = server;
     }
 
-    @Override
-    public String[] getArgs() {
-        return getNode().getServerManager().getServers().values().stream().filter(Server::isLocal).map(Server::getName).toArray(String[]::new);
-    }
 }

@@ -1,17 +1,17 @@
 package de.redstonecloud.cloud.commands.defaults;
 
-import de.redstonecloud.api.util.EmptyArrays;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
 import de.redstonecloud.shared.server.Server;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ExecuteCommand extends Command {
-    public int argCount = 1;
-
     public ExecuteCommand(String cmd) {
         super(cmd);
+        setCompletions(CommandCompletion.root()
+                .add(CommandCompletion.param(CommandCompletion.ParamType.SERVER)));
     }
 
     @Override
@@ -40,8 +40,4 @@ public class ExecuteCommand extends Command {
         log.info("Command executed on server " + server.getName() + ": " + command);
     }
 
-    @Override
-    public String[] getArgs() {
-        return getServer().getServerManager().getServers().keySet().toArray(EmptyArrays.STRING);
-    }
 }

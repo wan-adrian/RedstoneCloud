@@ -50,7 +50,7 @@ public class JarStart {
 
         RedisSettings redisCfg = RedstoneCloud.getConfig().redis();
         System.setProperty(Keys.PROPERTY_REDIS_PORT, String.valueOf(redisCfg.port()));
-        System.setProperty(Keys.PROPERTY_REDIS_IP, redisCfg.ip());
+        System.setProperty(Keys.PROPERTY_REDIS_IP, redisCfg.connectIp());
         System.setProperty(Keys.PROPERTY_REDIS_DB, String.valueOf(redisCfg.dbId()));
 
         if(redisCfg.internalInstance()) {

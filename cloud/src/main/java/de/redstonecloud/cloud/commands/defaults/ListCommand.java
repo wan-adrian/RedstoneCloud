@@ -7,8 +7,6 @@ import de.redstonecloud.shared.server.Server;
 import java.util.Comparator;
 
 public class ListCommand extends Command {
-    public int argCount = 0;
-
     public ListCommand(String cmd) {
         super(cmd);
     }

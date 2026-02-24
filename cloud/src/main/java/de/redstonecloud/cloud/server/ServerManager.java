@@ -482,6 +482,10 @@ public class ServerManager {
      * @return the created server, or null if cancelled
      */
     public Server startServer(Template template, Integer id) {
+        if (!RedstoneCloud.isRunning()) {
+            log.warn("Cannot start server while cloud is shutting down.");
+            return null;
+        }
         if (template == null) {
             log.error("Cannot start server: template is null");
             return null;
@@ -515,7 +519,7 @@ public class ServerManager {
                 .port(generateRandomPort())
                 .nodeId(node)
                 .env(Map.of(
-                        Keys.ENV_REDIS_IP, redisCfg.ip(),
+                        Keys.ENV_REDIS_IP, redisCfg.connectIp(),
                         Keys.ENV_REDIS_PORT, String.valueOf(redisCfg.port()),
                         Keys.ENV_REDIS_DB, String.valueOf(redisCfg.dbId()),
                         "BRIDGE_CFG", bridgeJson.toString()

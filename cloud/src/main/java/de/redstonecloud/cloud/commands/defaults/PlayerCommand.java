@@ -4,15 +4,30 @@ import de.redstonecloud.cloud.commands.Command;
 import de.redstonecloud.cloud.player.CloudPlayer;
 import lombok.extern.log4j.Log4j2;
 
+import de.redstonecloud.shared.commands.CommandCompletion;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Log4j2
 public class PlayerCommand extends Command {
-    public int argCount = 1;
-
     public PlayerCommand(String cmd) {
         super(cmd);
+        CommandCompletion completion = CommandCompletion.root();
+        completion.add(CommandCompletion.literal("help"));
+        completion.add(CommandCompletion.literal("list")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.SERVER)));
+
+        CommandCompletion.Node player = CommandCompletion.param(CommandCompletion.ParamType.PLAYER);
+        player.then(CommandCompletion.literal("info"));
+        player.then(CommandCompletion.literal("connect")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.SERVER)));
+        player.then(CommandCompletion.literal("kick")
+                .then(CommandCompletion.param(CommandCompletion.ParamType.ANY)));
+        completion.add(player);
+
+        setCompletions(completion);
     }
 
     @Override
@@ -26,7 +41,13 @@ public class PlayerCommand extends Command {
 
         switch (subCommand) {
             case "help" -> showHelp();
-            case "list" -> listPlayers();
+            case "list" -> {
+                if (args.length >= 2) {
+                    listPlayers(args[1]);
+                } else {
+                    listPlayers(null);
+                }
+            }
             default -> handlePlayerAction(args);
         }
     }
@@ -37,21 +58,39 @@ public class PlayerCommand extends Command {
 
     private void showHelp() {
         log.info("Usage: player <help|list|playername> <action>");
+        log.info("Usage: player list [server]");
         log.info("Actions:");
         log.info("  info - Show player information");
         log.info("  connect <server> - Connect player to a server");
         log.info("  kick <reason> - Kick player with a reason");
     }
 
-    private void listPlayers() {
+    private void listPlayers(String serverFilter) {
+        String filter = serverFilter == null ? "" : serverFilter.trim().toLowerCase(Locale.ROOT);
+        List<CloudPlayer> players = getServer().getPlayerManager().getPlayersByName().values().stream()
+                .filter(player -> {
+                    if (filter.isEmpty()) {
+                        return true;
+                    }
+                    String serverName = player.getConnectedServer() != null ? player.getConnectedServer().getName() : "";
+                    String proxyName = player.getConnectedNetwork() != null ? player.getConnectedNetwork().getName() : "";
+                    return serverName.equalsIgnoreCase(filter) || proxyName.equalsIgnoreCase(filter);
+                })
+                .toList();
+
+        if (players.isEmpty()) {
+            log.info(filter.isEmpty() ? "No connected players." : "No players found for server/proxy: {}", serverFilter);
+            return;
+        }
+
         log.info("Connected Players:");
-        getServer().getPlayerManager().getPlayersByName().entrySet().forEach(data -> {
+        for (CloudPlayer player : players) {
             String playerInfo = String.format(" - %s (%s | %s)",
-                    data.getKey(),
-                    data.getValue().getConnectedNetwork().getName(),
-                    data.getValue().getConnectedServer().getName());
+                    player.getName(),
+                    player.getConnectedNetwork() != null ? player.getConnectedNetwork().getName() : "---",
+                    player.getConnectedServer() != null ? player.getConnectedServer().getName() : "---");
             log.info(playerInfo);
-        });
+        }
     }
 
     private void handlePlayerAction(String[] args) {
@@ -145,18 +184,4 @@ public class PlayerCommand extends Command {
         log.info("Available actions: info, connect, kick");
     }
 
-    @Override
-    public String[] getArgs() {
-        List<String> players = getServer().getPlayerManager().getPlayers()
-                .entrySet().stream()
-                .map(entry -> entry.getValue().getName())
-                .toList();
-
-        List<String> cmds = new ArrayList<>();
-        cmds.add("help");
-        cmds.add("list");
-        cmds.addAll(players);
-
-        return cmds.toArray(String[]::new);
-    }
 }

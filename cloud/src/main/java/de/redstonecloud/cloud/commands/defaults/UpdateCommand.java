@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandArgs;
 import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.cloud.utils.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,14 @@ public class UpdateCommand extends Command {
 
     public UpdateCommand(String cmd) {
         super(cmd);
+        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE);
+        CommandCompletion.Node all = CommandCompletion.literal("all");
+        CommandCompletion.Flag reboot = CommandCompletion.flagSwitch("--reboot");
+
+        CommandCompletion completion = CommandCompletion.anyOrder(template, reboot);
+        completion.add(all);
+        all.then(CommandCompletion.literal("--reboot"));
+        setCompletions(completion);
     }
 
     @Override
@@ -27,10 +37,16 @@ public class UpdateCommand extends Command {
             return;
         }
 
-        String templateName = args[0];
-        boolean reboot = args.length > 1 && args[1].equalsIgnoreCase("--reboot");
+        CommandArgs parsed = parseArgs(args);
+        String templateName = parsed.positionals().isEmpty() ? null : parsed.positionals().getFirst();
+        boolean reboot = parsed.hasFlag("reboot");
 
         var serverManager = RedstoneCloud.getInstance().getServerManager();
+
+        if (templateName == null || templateName.isBlank()) {
+            log.warn("Usage: update <templateName|all> [--reboot]");
+            return;
+        }
 
         if ("all".equalsIgnoreCase(templateName)) {
             log.info("Updating all templates{}...",
@@ -77,11 +93,4 @@ public class UpdateCommand extends Command {
         Utils.updateSoftware(templateName, type, jarName, reboot);
     }
 
-    @Override
-    public String[] getArgs() {
-        return Stream.concat(
-                getServer().getServerManager().getTemplates().keySet().stream(),
-                Stream.of("all")
-        ).toArray(String[]::new);
-    }
 }
