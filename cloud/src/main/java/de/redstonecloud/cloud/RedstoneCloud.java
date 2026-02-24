@@ -9,6 +9,7 @@ import de.redstonecloud.cloud.events.EventManager;
 import de.redstonecloud.cloud.player.PlayerManager;
 import de.redstonecloud.cloud.plugin.PluginManager;
 import de.redstonecloud.cloud.redis.RedisInstance;
+import de.redstonecloud.cloud.rest.RestApiService;
 import de.redstonecloud.shared.commands.CommandManager;
 import de.redstonecloud.shared.config.SnakeYamlConfig;
 import de.redstonecloud.shared.console.Console;
@@ -49,6 +50,7 @@ public class RedstoneCloud {
     private EventManager eventManager;
     private TaskScheduler scheduler;
     private KeyCache keyCache;
+    private RestApiService restApiService;
 
     protected RedstoneCloud() {
         instance = this;
@@ -93,6 +95,13 @@ public class RedstoneCloud {
         log.debug("[BOOT] Enable all plugins");
         this.pluginManager.enableAllPlugins();
 
+        if (config.restApi().enabled()) {
+            log.debug("[BOOT] Starting REST API");
+            this.restApiService = new RestApiService(config.restApi());
+            this.restApiService.start();
+        } else {
+            log.debug("[BOOT] REST API disabled.");
+        }
 
         if(!config.cluster().nodes().isEmpty()) {
             log.debug("[BOOT] Loading cluster management");
@@ -117,6 +126,7 @@ public class RedstoneCloud {
         commandManager.addCommand(new PlayerCommand("player"));
         commandManager.addCommand(new UpdateCommand("update"));
         commandManager.addCommand(new ReloadCommand("reload"));
+        commandManager.addCommand(new RestApiCommand("restapi"));
 
         log.debug("[BOOT] Registered {} commands", commandManager.getCommandMap().size());
     }
@@ -162,6 +172,11 @@ public class RedstoneCloud {
             if(clusterManager != null) {
                 log.debug("[SHUTDOWN] Stopping cluster management");
                 clusterManager.stopServer();
+            }
+
+            if (restApiService != null) {
+                log.debug("[SHUTDOWN] Stopping REST API");
+                restApiService.stop();
             }
 
             log.info("RedstoneCloud has been shut down.");
