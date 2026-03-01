@@ -18,11 +18,8 @@ public class TemplateImpl extends Template {
     protected void createNewServer() {
         if(!RedstoneCloud.isRunning()) return;
 
-        if(ClusterManager.isCluster()) {
-            if(!getNodes().isEmpty()) {
-                ClusterNode node = ClusterManager.getInstance().getNodeById(getNodes().getFirst());
-                if(node == null || node.getStream() == null || node.isShuttingDown()) return;
-            }
+        if (isClusterConfigured() && !hasAvailableNode()) {
+            return;
         }
 
         try {
@@ -30,5 +27,26 @@ public class TemplateImpl extends Template {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean hasAvailableNode() {
+        if (getNodes().isEmpty()) {
+            return true;
+        }
+        for (String nodeId : getNodes()) {
+            if (!ClusterManager.isCluster()) {
+                return false;
+            }
+            ClusterNode node = ClusterManager.getInstance().getNodeById(nodeId);
+            if (node == null || node.getStream() == null || node.isShuttingDown()) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isClusterConfigured() {
+        return !RedstoneCloud.getConfig().cluster().nodes().isEmpty();
     }
 }

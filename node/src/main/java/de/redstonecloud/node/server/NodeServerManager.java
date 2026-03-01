@@ -397,6 +397,7 @@ public class NodeServerManager {
         log.info("Server {} prepared successfully from template {}", server.getName(), temp.getName());
 
         RCMaster.port(server.getName(), server.getPort());
+        de.redstonecloud.node.cluster.ClusterClient.getInstance().requestNodeSync();
     }
 
     public void start(Server server) {

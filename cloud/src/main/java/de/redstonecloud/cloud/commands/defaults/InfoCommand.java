@@ -38,6 +38,10 @@ public class InfoCommand extends Command {
         log.info("Server Type: " + server.getType().name());
         log.info("Server Status: " + server.getStatus());
         log.info("Server Port: " + server.getPort());
+        if (!server.isLocal()) {
+            log.info("Server Node: " + server.getNodeId());
+            log.info("Server Address: " + server.getAddress());
+        }
     }
 
 }

@@ -7,7 +7,10 @@ import de.redstonecloud.api.RCClusteringProto.*;
 
 import de.redstonecloud.node.RedstoneNode;
 import de.redstonecloud.node.config.entires.MasterSettings;
+import de.redstonecloud.node.config.entires.RedisSettings;
 import de.redstonecloud.node.server.NodeServerManager;
+import de.redstonecloud.shared.server.Server;
+import de.redstonecloud.api.util.Keys;
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -17,7 +20,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Log4j2
 @Getter
@@ -35,6 +44,22 @@ public class ClusterClient {
     @Setter
     private volatile boolean streamActive = false;
 
+    private volatile ConnectivityState lastState = null;
+    private volatile long lastStreamAttemptMs = 0L;
+
+    private final Queue<RCClusteringProto.Payload> pending = new ConcurrentLinkedQueue<>();
+    private final AtomicBoolean draining = new AtomicBoolean(false);
+    private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "Cluster-Stream-Sender");
+        t.setDaemon(true);
+        return t;
+    });
+    private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "Cluster-Heartbeat");
+        t.setDaemon(true);
+        return t;
+    });
+
     public static ClusterClient getInstance() {
         if (INSTANCE == null) INSTANCE = new ClusterClient();
         return INSTANCE;
@@ -51,6 +76,8 @@ public class ClusterClient {
     public void start() {
         connect();
         new Thread(this::connectionMonitorLoop, "Cluster-Reconnect-Thread").start();
+        heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeat, 10, 10, TimeUnit.SECONDS);
+        heartbeatExecutor.scheduleAtFixedRate(this::sendNodeSync, 15, 30, TimeUnit.SECONDS);
     }
 
     /* ====================================================================
@@ -103,6 +130,7 @@ public class ClusterClient {
 
             NodeServerManager.getInstance().reloadServerTypes(res.getTypesList().stream().map(t -> t.getConfig()).toList());
             NodeServerManager.getInstance().reloadTemplates(res.getTemplatesList().stream().map(t -> t.getData()).toList());
+            applyRedisSettings(res);
 
             log.info("Logged into master successfully. Token={}", token);
 
@@ -117,12 +145,13 @@ public class ClusterClient {
 
     private void openStream() {
         streamActive = false;
+        lastStreamAttemptMs = System.currentTimeMillis();
 
         outbound = RCClusteringServiceGrpc.newStub(channel)
                 .communicate(new InboundHandler());
 
-        // Register node
-        outbound.onNext(
+        // Register node (queued to avoid concurrent onNext)
+        sendOrQueue(
                 RCClusteringProto.Payload.newBuilder()
                         .setRegisterNode(
                                 RCClusteringProto.RegisterNode.newBuilder()
@@ -132,8 +161,35 @@ public class ClusterClient {
                         .build()
         );
 
+        onStreamReady();
+        sendHeartbeat();
         log.info("Opened bidirectional stream to master.");
-        streamActive = true;
+    }
+
+    private void applyRedisSettings(RCBootProto.LoginResponse res) {
+        String redisIp = res.getRedisIp();
+        int redisPort = res.getRedisPort();
+        int redisDb = res.getRedisDb();
+
+        if (redisIp == null || redisIp.isBlank() || redisPort <= 0) {
+            return;
+        }
+
+        RedisSettings redis = RedstoneNode.getConfig().redis();
+        boolean changed = !redisIp.equals(redis.ip()) || redisPort != redis.port() || redisDb != redis.dbId();
+        if (!changed) {
+            return;
+        }
+
+        log.warn("Updating node redis settings to match master: {}:{} (db={})", redisIp, redisPort, redisDb);
+        redis.ip(redisIp);
+        redis.port(redisPort);
+        redis.dbId(redisDb);
+        RedstoneNode.getConfig().save();
+
+        System.setProperty(Keys.PROPERTY_REDIS_PORT, String.valueOf(redisPort));
+        System.setProperty(Keys.PROPERTY_REDIS_IP, redis.connectIp());
+        System.setProperty(Keys.PROPERTY_REDIS_DB, String.valueOf(redisDb));
     }
 
     /* ====================================================================
@@ -147,22 +203,42 @@ public class ClusterClient {
             try {
                 ConnectivityState state = channel.getState(true);
 
-                if (state == ConnectivityState.READY && streamActive) {
-                    retryDelay = 1;
+                if (state == ConnectivityState.READY) {
+                    if (streamActive) {
+                        lastState = ConnectivityState.READY;
+                        retryDelay = 1;
+                        Thread.sleep(1000);
+                        continue;
+                    }
+                    if (loggedIn) {
+                        long now = System.currentTimeMillis();
+                        if (now - lastStreamAttemptMs >= 10_000L) {
+                            log.info("Cluster stream inactive, reopening.");
+                            openStream();
+                        }
+                        Thread.sleep(1000);
+                        continue;
+                    }
+                    doLogin();
                     Thread.sleep(1000);
                     continue;
                 }
 
                 if (state != ConnectivityState.READY) {
-                    log.warn("Master connection lost ({}). Reconnecting...", state);
+                    if (lastState != state) {
+                        log.warn("Master connection lost ({}). Reconnecting...", state);
+                        lastState = state;
+                    }
 
                     connect();
 
-                    if (loggedIn && streamActive) log.info("Reconnected!");
-                    else log.warn("Reconnect failed. Retrying in {}s", retryDelay);
+                    if (loggedIn && streamActive) {
+                        log.info("Reconnected!");
+                    } else if (lastState != ConnectivityState.READY) {
+                        log.warn("Reconnect failed. Retrying in {}s", retryDelay);
+                    }
 
-                    Thread.sleep(retryDelay * 1000L);
-                    retryDelay = Math.min(retryDelay * 2, 30);
+                    Thread.sleep(10_000L);
                 }
 
                 Thread.sleep(500);
@@ -190,16 +266,13 @@ public class ClusterClient {
             catch (InterruptedException ignored) {}
         }
 
+        sendExecutor.shutdownNow();
+        heartbeatExecutor.shutdownNow();
         log.info("Cluster client shut down.");
     }
 
     public void sendServerDied(String server) {
-        if (!streamActive) {
-            System.out.println("Stream not active, cannot send serverDied for " + server);
-            return;
-        }
-
-        outbound.onNext(
+        sendOrQueue(
                 Payload.newBuilder()
                         .setServerDied(
                                 ServerDied.newBuilder()
@@ -211,12 +284,7 @@ public class ClusterClient {
     }
 
     public void sendServerPort(String server, int port) {
-        if (!streamActive) {
-            System.out.println("Stream not active, cannot send serverDied for " + server);
-            return;
-        }
-
-        outbound.onNext(
+        sendOrQueue(
                 Payload.newBuilder()
                         .setServerPortSet(
                                 ServerPortSet.newBuilder()
@@ -229,9 +297,7 @@ public class ClusterClient {
     }
 
     public void sendStatus(String server, String status) {
-        if (!streamActive) return;
-
-        outbound.onNext(
+        sendOrQueue(
                 Payload.newBuilder()
                         .setServerStatusChange(
                                 ServerStatusChange.newBuilder()
@@ -244,14 +310,118 @@ public class ClusterClient {
     }
 
     public void sendShutdownNode() {
-        if (!streamActive) return;
-
-        outbound.onNext(
+        sendOrQueue(
                 Payload.newBuilder()
                         .setNodeShutdown(
                                 NodeShutdown.newBuilder().build()
                         )
                         .build()
         );
+    }
+
+    public void onStreamReady() {
+        if (streamActive) {
+            return;
+        }
+        streamActive = true;
+        sendNodeSync();
+        flushPending();
+    }
+
+    private void sendHeartbeat() {
+        if (!streamActive || token == null || token.isBlank()) {
+            return;
+        }
+        sendOrQueue(Payload.newBuilder()
+                .setHeartbeat(Heartbeat.newBuilder()
+                        .setNodeId(RedstoneNode.getConfig().node().id())
+                        .setToken(token)
+                        .build())
+                .build());
+    }
+
+    public void sendPong() {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        sendOrQueue(Payload.newBuilder()
+                .setPong(Pong.newBuilder()
+                        .setToken(token)
+                        .build())
+                .build());
+    }
+
+    private void sendNodeSync() {
+        if (!streamActive || token == null || token.isBlank()) {
+            return;
+        }
+        NodeSync.Builder sync = NodeSync.newBuilder()
+                .setNodeId(RedstoneNode.getConfig().node().id())
+                .setToken(token);
+
+        for (Server server : NodeServerManager.getInstance().getServers().values()) {
+            if (server == null) {
+                continue;
+            }
+            NodeServerState state = NodeServerState.newBuilder()
+                    .setName(server.getName())
+                    .setTemplate(server.getTemplate().getName())
+                    .setType(server.getType().name())
+                    .setUuid(server.getUUID().toString())
+                    .setStatus(server.getStatus().name())
+                    .setPort(server.getPort())
+                    .setAddress(server.getAddress().getHost())
+                    .build();
+            sync.addServers(state);
+        }
+
+        sendOrQueue(Payload.newBuilder().setNodeSync(sync).build());
+    }
+
+    public void requestNodeSync() {
+        sendNodeSync();
+    }
+
+    private void sendOrQueue(RCClusteringProto.Payload payload) {
+        if (payload == null) {
+            return;
+        }
+        if (pending.size() >= 500) {
+            pending.poll();
+        }
+        pending.add(payload);
+        drainPending();
+    }
+
+    private void flushPending() {
+        drainPending();
+    }
+
+    private void drainPending() {
+        if (!streamActive || outbound == null) {
+            return;
+        }
+        if (!draining.compareAndSet(false, true)) {
+            return;
+        }
+        sendExecutor.execute(() -> {
+            try {
+                while (streamActive && outbound != null) {
+                    RCClusteringProto.Payload payload = pending.poll();
+                    if (payload == null) {
+                        break;
+                    }
+                    outbound.onNext(payload);
+                }
+            } catch (Exception e) {
+                streamActive = false;
+                log.warn("Cluster stream send failed: {}", e.getMessage());
+            } finally {
+                draining.set(false);
+                if (streamActive && outbound != null && !pending.isEmpty()) {
+                    drainPending();
+                }
+            }
+        });
     }
 }

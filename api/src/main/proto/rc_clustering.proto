@@ -36,6 +36,12 @@ message Payload {
     TempateChanges templateChanges = 40;
     TypeChanges typeChanges = 41;
 
+    NodeSync nodeSync = 45;
+
+    Heartbeat heartbeat = 46;
+    Ping ping = 47;
+    Pong pong = 48;
+
     NodeShutdown nodeShutdown = 50;
   }
 }
@@ -103,3 +109,32 @@ message TypeChanges {
 }
 
 message NodeShutdown {}
+
+message NodeServerState {
+  string name = 1;
+  string template = 2;
+  string type = 3;
+  string uuid = 4;
+  string status = 5;
+  int32 port = 6;
+  string address = 7;
+}
+
+message NodeSync {
+  string nodeId = 1;
+  string token = 2;
+  repeated NodeServerState servers = 3;
+}
+
+message Heartbeat {
+  string nodeId = 1;
+  string token = 2;
+}
+
+message Ping {
+  string token = 1;
+}
+
+message Pong {
+  string token = 1;
+}

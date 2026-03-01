@@ -103,7 +103,10 @@ public abstract class Template {
     }
 
     private boolean canCreateMoreServers() {
-        return runningServers <= maxServers;
+        if (maxServers <= 0) {
+            return true;
+        }
+        return runningServers < maxServers;
     }
 
     protected abstract void createNewServer();

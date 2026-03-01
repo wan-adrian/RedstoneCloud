@@ -51,11 +51,25 @@ public class StartCommand extends Command {
         }
 
         if (amount != 1 && newId == -1) {
+            int started = 0;
             for (int i = 0; i < amount; i++) {
-                RedstoneCloud.getInstance().getServerManager().startServer(template);
+                if (RedstoneCloud.getInstance().getServerManager().startServer(template) != null) {
+                    started++;
+                }
             }
-        } else RedstoneCloud.getInstance().getServerManager().startServer(template, newId);
-        log.info("Successfully started server using template " + template.getName());
+            if (started > 0) {
+                log.info("Successfully started {} server(s) using template {}", started, template.getName());
+            } else {
+                log.error("Failed to start servers using template {}", template.getName());
+            }
+            return;
+        }
+
+        if (RedstoneCloud.getInstance().getServerManager().startServer(template, newId) != null) {
+            log.info("Successfully started server using template {}", template.getName());
+        } else {
+            log.error("Failed to start server using template {}", template.getName());
+        }
     }
 
     private int parseIntSafe(String value, int fallback) {

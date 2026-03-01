@@ -25,10 +25,10 @@ Main file: `config.yml`
 
 ### `cluster`
 
-For now, leave unused in cloud-only mode.
+Cluster settings for a master + node setup.
 
 - `port` (`int`, default `6854`)
-- `nodes` (`list`, default empty)
+- `nodes` (`list`, default empty, each item has `name` and `id`)
 
 ### `restApi`
 

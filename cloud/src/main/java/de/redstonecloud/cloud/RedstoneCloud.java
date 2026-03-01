@@ -19,6 +19,7 @@ import de.redstonecloud.cloud.scheduler.defaults.CheckTemplateTask;
 import de.redstonecloud.cloud.server.ServerManager;
 import de.redstonecloud.shared.console.ConsoleThread;
 import de.redstonecloud.cloud.utils.Utils;
+import de.redstonecloud.shared.utils.CurrentInstance;
 import eu.okaeri.configs.ConfigManager;
 import lombok.Getter;
 import de.redstonecloud.api.redis.broker.Broker;
@@ -62,6 +63,7 @@ public class RedstoneCloud {
     private void boot() {
         running = true;
         log.info("RedstoneCloud is starting...");
+        CurrentInstance.setNODE_ID("");
 
         log.debug("[BOOT] Starting cloud scheduler");
         this.scheduler = new TaskScheduler(new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors()));

@@ -22,6 +22,9 @@ message LoginResponse {
   string token = 4;
   repeated Type types = 5;
   repeated Template templates = 6;
+  string redis_ip = 7;
+  int32 redis_port = 8;
+  int32 redis_db = 9;
 }
 
 enum Status {

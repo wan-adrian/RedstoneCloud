@@ -244,7 +244,12 @@ public class ServerManager {
                             .build()
                     ).toList();
 
-                    ClusterManager.getInstance().getNodeById(nodeId).send(RCClusteringProto.Payload.newBuilder()
+                    ClusterNode node = ClusterManager.getInstance().getNodeById(nodeId);
+                    if (node == null || node.getStream() == null || node.isShuttingDown()) {
+                        continue;
+                    }
+
+                    node.send(RCClusteringProto.Payload.newBuilder()
                             .setTemplateChanges(RCClusteringProto.TempateChanges.newBuilder()
                                     .addAllTemplates(templates)
                                     .build())
@@ -396,6 +401,9 @@ public class ServerManager {
                 ).toList();
 
                 for (ClusterNode node : ClusterManager.getInstance().getNodes()) {
+                    if (node == null || node.getStream() == null || node.isShuttingDown()) {
+                        continue;
+                    }
                     node.send(RCClusteringProto.Payload.newBuilder()
                             .setTypeChanges(RCClusteringProto.TypeChanges.newBuilder()
                                     .addAllTypes(types)
@@ -537,9 +545,14 @@ public class ServerManager {
             return null;
         }
 
-        server.prepare();
-        //wait for server.getStatus() to be PREPARED, then start
+        // Register the server before sending remote prepare so status updates can be applied.
         add(server);
+        try {
+            server.prepare();
+        } catch (RuntimeException e) {
+            remove(server);
+            throw e;
+        }
         //TODO: This might be in an extra thread later to not block the main thread
         while (server.getStatus() != ServerStatus.PREPARED) {
             try {
@@ -552,7 +565,9 @@ public class ServerManager {
 
         template.setRunningServers(template.getRunningServers() + 1);
 
-        server.start();
+        if (server.isLocal()) {
+            server.start();
+        }
         RedstoneCloud.getInstance()
                 .getEventManager()
                 .callEvent(new ServerStartEvent(server));

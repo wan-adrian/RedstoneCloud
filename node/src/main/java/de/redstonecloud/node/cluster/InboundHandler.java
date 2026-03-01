@@ -19,6 +19,9 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
         switch (msg.getPayloadCase()) {
 
             case PREPARESERVER -> {
+                if (!isTokenValid(msg.getPrepareServer().getToken())) {
+                    return;
+                }
                 log.info("Preparing server {} from template {}",
                         msg.getPrepareServer().getName(),
                         msg.getPrepareServer().getTemplate());
@@ -35,11 +38,17 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
             }
 
             case STARTSERVER -> {
+                if (!isTokenValid(msg.getStartServer().getToken())) {
+                    return;
+                }
                 log.info("Starting server {}", msg.getStartServer().getServer());
                 NodeServerManager.getInstance().start(NodeServerManager.getInstance().getServer(msg.getStartServer().getServer()));
             }
 
             case STOPSERVER -> {
+                if (!isTokenValid(msg.getStopServer().getToken())) {
+                    return;
+                }
                 boolean kill = msg.getStopServer().getKill();
                 log.info("Stopping server {} (kill={})", msg.getStopServer().getServer(), kill);
                 Server server = NodeServerManager.getInstance().getServer(msg.getStopServer().getServer());
@@ -53,6 +62,9 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
 
 
             case EXECUTECOMMAND -> {
+                if (!isTokenValid(msg.getExecuteCommand().getToken())) {
+                    return;
+                }
                 log.info("Executing command on server {}: {}",
                         msg.getExecuteCommand().getServer(),
                         msg.getExecuteCommand().getCommand());
@@ -62,11 +74,12 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
                 server.writeConsole(msg.getExecuteCommand().getCommand());
             }
 
-            case RESPONSE -> {
-                log.info("Master → response {}", msg.getResponse().getMessage());
-            }
+            case RESPONSE -> log.info("Master → response {}", msg.getResponse().getMessage());
 
             case SERVERSTATUSCHANGE -> {
+                if (!isTokenValid(msg.getServerStatusChange().getToken())) {
+                    return;
+                }
                 String serverName = msg.getServerStatusChange().getServer();
                 String status = msg.getServerStatusChange().getStatus();
                 log.info("{} changed status to {}", serverName, status);
@@ -89,6 +102,19 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
                 );
             }
 
+            case PING -> {
+                if (!isTokenValid(msg.getPing().getToken())) {
+                    return;
+                }
+                ClusterClient.getInstance().sendPong();
+            }
+
+            case PONG -> {
+                if (!isTokenValid(msg.getPong().getToken())) {
+                    return;
+                }
+            }
+
             default -> log.warn("Master → Unknown message: {}", msg.getPayloadCase());
         }
     }
@@ -96,11 +122,25 @@ public class InboundHandler implements StreamObserver<RCClusteringProto.Payload>
     @Override
     public void onError(Throwable t) {
         log.error("Stream error: {}", t.getMessage());
+        ClusterClient.getInstance().setStreamActive(false);
     }
 
     @Override
     public void onCompleted() {
         log.warn("Master closed stream.");
         ClusterClient.getInstance().setStreamActive(false);
+    }
+
+    private boolean isTokenValid(String token) {
+        String expected = ClusterClient.getInstance().getToken();
+        if (expected == null || expected.isBlank() || token == null || token.isBlank()) {
+            log.warn("Received cluster message with missing token");
+            return false;
+        }
+        if (!expected.equals(token)) {
+            log.warn("Received cluster message with invalid token");
+            return false;
+        }
+        return true;
     }
 }

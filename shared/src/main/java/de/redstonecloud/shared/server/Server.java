@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -63,6 +64,10 @@ public abstract class Server implements ICloudServer, Cacheable {
     @Builder.Default
     @Getter(AccessLevel.NONE)
     private final AtomicReference<ServerStatus> statusRef = new AtomicReference<>(ServerStatus.NONE);
+
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    private final AtomicBoolean startRequested = new AtomicBoolean(false);
 
     @Builder.Default
     @Setter
@@ -123,6 +128,14 @@ public abstract class Server implements ICloudServer, Cacheable {
         }
     }
 
+    public boolean requestStart() {
+        return startRequested.compareAndSet(false, true);
+    }
+
+    public void clearStartRequest() {
+        startRequested.set(false);
+    }
+
     public ServerStatus getStatus() {
         return statusRef.get();
     }
@@ -156,11 +169,20 @@ public abstract class Server implements ICloudServer, Cacheable {
     }
 
     public boolean isLocal() {
-        return nodeId == null || nodeId.isEmpty() || nodeId.equals(CurrentInstance.getNODE_ID());
+        String current = CurrentInstance.getNODE_ID();
+        return nodeId == null || nodeId.isEmpty() || (current != null && nodeId.equals(current));
     }
 
     public boolean isMaster() {
         return nodeId == null || nodeId.isEmpty();
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId == null ? "" : nodeId;
     }
 
     /**
@@ -223,6 +245,7 @@ public abstract class Server implements ICloudServer, Cacheable {
         log.info("Server {} exited", name);
 
         setStatus(ServerStatus.STOPPED);
+        clearStartRequest();
 
         if(startMethod != null) {
             startMethod.cleanup();

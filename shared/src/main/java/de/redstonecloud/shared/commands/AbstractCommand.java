@@ -1,7 +1,5 @@
 package de.redstonecloud.shared.commands;
 
-import de.redstonecloud.shared.commands.CommandCompletion;
-
 public abstract class AbstractCommand {
     public String cmd;
     private CommandCompletion completions;
