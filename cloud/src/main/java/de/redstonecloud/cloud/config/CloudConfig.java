@@ -3,10 +3,10 @@ package de.redstonecloud.cloud.config;
 import de.redstonecloud.cloud.config.entires.BridgeSettings;
 import de.redstonecloud.cloud.config.entires.ClusterSettings;
 import de.redstonecloud.cloud.config.entires.RedisSettings;
+import de.redstonecloud.cloud.config.entires.RestApiSettings;
 import de.redstonecloud.shared.startmethods.StartMethods;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
-import eu.okaeri.configs.annotation.CustomKey;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -27,6 +27,9 @@ public final class CloudConfig extends OkaeriConfig {
 
     @Comment("Cluster settings")
     private ClusterSettings cluster = new ClusterSettings();
+
+    @Comment("Optional REST API settings")
+    private RestApiSettings restApi = new RestApiSettings();
 
     @Comment("Enable or disable debug logging")
     private boolean debug = false;

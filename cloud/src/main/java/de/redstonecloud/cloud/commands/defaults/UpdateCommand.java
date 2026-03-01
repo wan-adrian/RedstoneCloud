@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.redstonecloud.cloud.RedstoneCloud;
 import de.redstonecloud.cloud.commands.Command;
+import de.redstonecloud.shared.commands.CommandCompletion;
+import de.redstonecloud.shared.commands.CommandExecution;
 import de.redstonecloud.shared.server.Template;
 import de.redstonecloud.cloud.utils.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -18,19 +20,30 @@ public class UpdateCommand extends Command {
 
     public UpdateCommand(String cmd) {
         super(cmd);
+        CommandCompletion.Node template = CommandCompletion.param(CommandCompletion.ParamType.TEMPLATE, "template");
+        CommandCompletion.Node all = CommandCompletion.literal("all");
+        CommandCompletion.Flag reboot = CommandCompletion.flagSwitch("reboot", "--reboot");
+
+        CommandCompletion completion = CommandCompletion.anyOrder(template, reboot);
+        completion.add(all);
+        all.then(CommandCompletion.literal("--reboot"));
+        setCompletions(completion);
     }
 
     @Override
-    protected void onCommand(String[] args) {
-        if (args.length < 1) {
+    public void onCommand(CommandExecution execution) {
+        String templateName = execution.value("template");
+        if (templateName == null || templateName.isBlank()) {
+            templateName = execution.positional(0);
+        }
+        boolean reboot = execution.has("reboot");
+
+        var serverManager = RedstoneCloud.getInstance().getServerManager();
+
+        if (templateName == null || templateName.isBlank()) {
             log.warn("Usage: update <templateName|all> [--reboot]");
             return;
         }
-
-        String templateName = args[0];
-        boolean reboot = args.length > 1 && args[1].equalsIgnoreCase("--reboot");
-
-        var serverManager = RedstoneCloud.getInstance().getServerManager();
 
         if ("all".equalsIgnoreCase(templateName)) {
             log.info("Updating all templates{}...",
@@ -77,11 +90,4 @@ public class UpdateCommand extends Command {
         Utils.updateSoftware(templateName, type, jarName, reboot);
     }
 
-    @Override
-    public String[] getArgs() {
-        return Stream.concat(
-                getServer().getServerManager().getTemplates().keySet().stream(),
-                Stream.of("all")
-        ).toArray(String[]::new);
-    }
 }

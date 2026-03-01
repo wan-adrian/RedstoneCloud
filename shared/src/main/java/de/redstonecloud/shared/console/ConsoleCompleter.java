@@ -1,6 +1,7 @@
 package de.redstonecloud.shared.console;
 
 import de.redstonecloud.shared.commands.AbstractCommand;
+import de.redstonecloud.shared.commands.CommandCompletion;
 import de.redstonecloud.shared.commands.CommandManager;
 import de.redstonecloud.shared.utils.CurrentInstance;
 import org.jline.reader.*;
@@ -29,31 +30,31 @@ public class ConsoleCompleter implements Completer {
 
                     candidates.add(new Candidate(match));
                 }
-            } else if (parsedLine.wordIndex() > 0 && !parsedLine.word().isEmpty()) {
-                String command = parsedLine.words().getFirst();
-                AbstractCommand cmd;
-                if ((cmd = CommandManager.getInstance().getCommand(command)) != null) {
-                    if(parsedLine.words().size() - 2 > cmd.argCount) {
-                        return;
-                    }
-
-                    for(String arg : cmd.getArgs()) {
-                        if (!arg.toLowerCase().startsWith(parsedLine.word().toLowerCase())) {
-                            continue;
-                        }
-                        candidates.add(new Candidate(arg));
-                    }
-                }
             } else {
                 String command = parsedLine.words().getFirst();
-                AbstractCommand cmd;
-                if ((cmd = CommandManager.getInstance().getCommand(command)) != null) {
-                    //check if argCount is reached
-                    if (parsedLine.words().size() - 2 > cmd.argCount) {
-                        return;
-                    }
+                AbstractCommand cmd = CommandManager.getInstance().getCommand(command);
+                if (cmd == null) {
+                    return;
+                }
 
-                    for(String arg : cmd.getArgs()) {
+                int wordIndex = parsedLine.wordIndex();
+                int argIndex = wordIndex - 1;
+
+                List<String> words = parsedLine.words();
+                List<String> args = words.size() > 1 ? words.subList(1, words.size()) : List.of();
+
+                if (argIndex < 0) {
+                    return;
+                }
+
+                String currentToken = parsedLine.word();
+                String[] argsArray = args.toArray(String[]::new);
+                CommandCompletion completion = cmd.getCompletions();
+                if (completion == null) {
+                    return;
+                }
+                for (String arg : completion.complete(argsArray, argIndex, currentToken)) {
+                    if (arg != null && !arg.isEmpty()) {
                         candidates.add(new Candidate(arg));
                     }
                 }

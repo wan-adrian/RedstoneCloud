@@ -169,6 +169,15 @@
 
                     <createDependencyReducedPom>false</createDependencyReducedPom>
 
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>module-info.class</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+
                     <outputFile>
                         target/${project.artifactId}-${project.version}-shaded.jar
                     </outputFile>

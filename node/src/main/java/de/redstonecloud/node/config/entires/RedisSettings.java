@@ -18,4 +18,11 @@ public class RedisSettings extends OkaeriConfig {
 
     @Comment("Redis Database ID")
     int dbId = 0;
+
+    public String connectIp() {
+        if ("0.0.0.0".equals(ip) || "0.0.0.0/0".equals(ip)) {
+            return "127.0.0.1";
+        }
+        return ip;
+    }
 }
