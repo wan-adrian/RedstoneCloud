@@ -190,6 +190,18 @@ public abstract class Server implements ICloudServer, Cacheable {
 
             startMethod.prepare(templatePath.toString(), type.startCommand(), env);
             configureServerPort(Path.of(startMethod.getDirectory()));
+
+            File rootPluginsDir = new File(Directories.PLUGINS_DIR + type.name());
+            File serverPluginsDir = new File(directory + "/plugins");
+
+            if (rootPluginsDir.exists() && rootPluginsDir.isDirectory()) {
+                try {
+                    FileUtils.copyDirectory(rootPluginsDir, serverPluginsDir);
+                } catch (IOException e) {
+                    log.error("Failed to copy plugins for server type {}", type.name(), e);
+                }
+            }
+
             setStatus(ServerStatus.PREPARED);
         } catch (Exception e) {
             log.error("Failed to prepare server {}", name, e);
