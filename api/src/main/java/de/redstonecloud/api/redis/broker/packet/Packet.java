@@ -18,7 +18,7 @@ public abstract class Packet {
     public abstract void serialize(JsonArray data);
     public abstract void deserialize(JsonArray data);
 
-    protected int sessionId = ThreadLocalRandom.current().nextInt(0, 1000);
+    protected int sessionId = ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE);
 
     protected String from = Broker.get().getMainRoute();
     protected String to = "cloud";
@@ -49,5 +49,18 @@ public abstract class Packet {
             broker.addPendingResponse(this.sessionId, new ResponseContainer<>(packetType, callback));
 
         broker.publish(this);
+    }
+
+    public void sendImmediately() {
+        this.sendImmediately(null, null);
+    }
+
+    public <T extends Packet> void sendImmediately(Class<T> packetType, Consumer<T> callback) {
+        Broker broker = Broker.get();
+
+        if (callback != null)
+            broker.addPendingResponse(this.sessionId, new ResponseContainer<>(packetType, callback));
+
+        broker.publishImmediately(this);
     }
 }
