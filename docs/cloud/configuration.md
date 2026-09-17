@@ -22,6 +22,7 @@ Main file: `config.yml`
 - `hubTemplate` (`string`, default `Lobby`)
 - `hubDescription` (`string`)
 - `hubNotAvailable` (`string`)
+- `downstreamTransport` (`enum`, options `NETHERNET`, `RAKNET`, `AUTO`; default `NETHERNET`)
 
 ### `cluster`
 
@@ -58,6 +59,7 @@ bridge:
   hubTemplate: "Lobby"
   hubDescription: "Go back to the lobby server"
   hubNotAvailable: "There is no hub server available at the moment."
+  downstreamTransport: NETHERNET
 cluster:
   port: 6854
   nodes: []

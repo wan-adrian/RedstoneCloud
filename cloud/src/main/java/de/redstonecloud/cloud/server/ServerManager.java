@@ -510,6 +510,7 @@ public class ServerManager {
         bridgeJson.addProperty("hub_template", bridgeSettings.hubTemplate());
         bridgeJson.addProperty("hubcommand_desc", bridgeSettings.hubDescription());
         bridgeJson.addProperty("hubcommand_no_hub_available", bridgeSettings.hubNotAvailable());
+        bridgeJson.addProperty("downstream_transport", bridgeSettings.downstreamTransport().name());
 
         ServerImpl server = ServerImpl.builder()
                 .address(clusterNode != null ? clusterNode.getAddress() : "127.0.0.1")

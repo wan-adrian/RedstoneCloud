@@ -10,6 +10,12 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(fluent = true)
 public class BridgeSettings extends OkaeriConfig {
+    public enum DownstreamTransport {
+        NETHERNET,
+        RAKNET,
+        AUTO
+    }
+
     @Comment("Hub Template")
     String hubTemplate = "Lobby";
 
@@ -24,4 +30,7 @@ public class BridgeSettings extends OkaeriConfig {
 
     @Comment("Allow player to join fallback server on join if no other hub server is available")
     boolean fallbackOnJoin = true;
+
+    @Comment("Downstream transport used by WaterdogPE: NETHERNET, RAKNET, or AUTO")
+    DownstreamTransport downstreamTransport = DownstreamTransport.NETHERNET;
 }
